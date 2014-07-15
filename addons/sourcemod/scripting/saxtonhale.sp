@@ -7,6 +7,8 @@ FlaminSarge - He makes cool things. He improves on terrible things until they're
 Chdata - A Hale enthusiast with a good understanding of this mod's balance between all classes, and a coder.
 
 New plugin thread on AlliedMods: https://forums.alliedmods.net/showthread.php?p=2167912
+
+Triggering build <-- WildCard65
 */
 
 #pragma semicolon 1
