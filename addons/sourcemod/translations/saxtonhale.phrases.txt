@@ -1,0 +1,418 @@
+"Phrases"
+{
+	"vsh_needmoreplayers"
+	{
+		"en"    "VS Saxton Hale Mode is disabled. Need more players to start!"
+	}
+	"vsh_open_menu"
+	{
+		"en"	"Type {olive}/hale{default} to open the VS Saxton Hale Menu!"
+	}
+	"vsh_open_ach"
+	{
+		"en"	"Type {olive}/haleach{default} for achievements. (Data from 9th was restored to 8th September)"
+	}
+	"vsh_nextmap"
+	{
+		"#format" "{1:s}"
+		"en"	"{olive}VS Saxton Hale Mode{default} will be played on {olive}{1}{default}"
+	}
+	"vsh_hale_is_alive"
+	{
+		"#format" "{1:N},{2:i},{3:i}"
+		"en"	"Saxton Hale ({1}) had {2} (of {3}) health left."
+	}
+	"vsh_vagineer_is_alive"
+	{
+		"#format" "{1:N},{2:i},{3:i}"
+		"en"	"The Vagineer ({1}) had {2} (of {3}) health left."
+	}
+	"vsh_hhh_is_alive"
+	{
+		"#format" "{1:N},{2:i},{3:i}"
+		"en"	"The Horseless Headless Horsemann Jr. ({1}) had {2} (of {3}) health left."
+	}
+	"vsh_cbs_is_alive"
+	{
+		"#format" "{1:N},{2:i},{3:i}"
+		"en"	"The Christian Brutal Sniper ({1}) had {2} (of {3}) health left."
+	}
+	"vsh_hale_show_hp"
+	{
+		"#format" "{1:i},{2:i}"
+		"en"	"Saxton Hale showed his current HP: {1} of {2}"
+	}
+	"vsh_vagineer_show_hp"
+	{
+		"#format" "{1:i},{2:i}"
+		"en"	"The Vagineer showed his current HP: {1} of {2}"
+	}
+	"vsh_hhh_show_hp"
+	{
+		"#format" "{1:i},{2:i}"
+		"en"	"The Horseless Headless Horsemann Jr. showed his current HP: {1} of {2}"
+	}
+	"vsh_cbs_show_hp"
+	{
+		"#format" "{1:i},{2:i}"
+		"en"	"The Christian Brutal Sniper showed his current HP: {1} of {2}"
+	}
+	"vsh_hale_hp"
+	{
+		"#format" "{1:i},{2:i}"
+		"en"	"Saxton Hale's current health is: {1} of {2}"
+	}
+	"vsh_vagineer_hp"
+	{
+		"#format" "{1:i},{2:i}"
+		"en"	"The Vagineer's current health is: {1} of {2}"
+	}
+	"vsh_hhh_hp"
+	{
+		"#format" "{1:i},{2:i}"
+		"en"	"The Horseless Headless Horsemann Jr.'s current health is: {1} of {2}"
+	}
+	"vsh_cbs_hp"
+	{
+		"#format" "{1:i},{2:i}"
+		"en"	"The Christian Brutal Sniper's current health is: {1} of {2}"
+	}
+	"vsh_can_not_see_hp"
+	{
+		"en"	"You can no longer check health in this round (3 checks per round)."
+	}
+	"vsh_wait_hp"
+	{
+		"#format" "{1:i},{2:i}"
+		"en"	"You cannot see his HP now (wait {1} seconds). Last known health was {2}."
+	}
+	"vsh_hale_select_text"
+	{
+		"en"	"will become Saxton Hale next round!"
+	}
+	"vsh_damage"
+	{
+		"#format" "{1:i}"
+		"en"	"Damage dealt: {1}"
+	}
+	"vsh_point_enable"
+	{
+		"#format" "{1:i}"
+		"en"	"{1} players are left; control point enabled!"
+	}
+	"vsh_queue"
+	{
+		"#format" "{1:i}"
+		"en"	"Queue will be generated after {1} rounds."
+	}
+	"vsh_skip_hale"
+	{
+		"en"	"You must be the next Hale to view this panel.\nIf you think you ARE the next Hale, type /haleme again and the panel should come up."
+	}
+	"vsh_skip_hale_2"
+	{
+		"en"	"Type /haleme if you've changed your mind about being Saxton Hale!\nYou may have to enter the command twice to get it to show up."
+	}
+	"vsh_skip_hale_q"
+	{
+		"en"	"Are you ready to be Saxton Hale next round?"
+	}
+	"vsh_skip_hale_da"
+	{
+		"en"	"Yes, I'm ready to be Hale!"
+	}
+	"vsh_skip_hale_niet"
+	{
+		"en"	"Nope, I'd rather not be Hale."
+	}
+	"vsh_top_3"
+	{
+		"en"	"Most damage dealt by:"
+	}
+	"vsh_start_hale"
+	{
+		"#format" "{1:N},{2:i}"
+		"en"	"{1} became Saxton Hale with {2} HP!"
+	}
+	"vsh_start_vagineer"
+	{
+		"#format" "{1:N},{2:i}"
+		"en"	"SPECIAL ROUND!\n{1} became the VAGINEER with {2} HP!"
+	}
+	"vsh_start_hhh"
+	{
+		"#format" "{1:N},{2:i}"
+		"en"	"SPECIAL ROUND!\n{1} became the\nHorseless Headless Horsemann Jr. with {2} HP!"
+	}
+	"vsh_start_cbs"
+	{
+		"#format" "{1:N},{2:i}"
+		"en"	"SPECIAL ROUND!\n{1} became the Christian Brutal Sniper with {2} HP!"
+	}
+	"vsh_uber-charge"
+	{
+		"en"	"Ubercharge"
+	}
+	"vsh_health"
+	{
+		"#format" "{1:i},{2:i}"
+		"en"	"Health: {1} of {2}"
+	}
+	"vsh_do_rage"
+	{
+		"en"	"Taunt to activate RAGE."
+	}
+	"vsh_rage_meter"
+	{
+		"#format" "{1:i}"
+		"en"	"RAGE meter: {1} percent!"
+	}
+	"vsh_super_duper_jump"
+	{
+		"en"	"Super Duper Jump is Ready!"
+	}
+	"vsh_teleport_status"
+	{
+		"#format" "{1:i}"
+		"en"	"Teleport charge: {1} percent. At 100 percent, stand up to teleport."
+	}
+	"vsh_jump_status"
+	{
+		"#format" "{1:i}"
+		"en"	"Jump charge: {1} percent. Look up and stand up to use super-jump."
+	}
+	"vsh_teleport_status_2"
+	{
+		"en"	"Teleporter will be ready again in:"
+	}
+	"vsh_jump_status_2"
+	{
+		"en"	"Super Jump will be ready again in:"
+	}
+	"vsh_help_hale"
+	{
+		"en"	"Saxton Hale:\nSuper Jump: crouch, look up and stand up.\nWeigh-down: in midair, look down and crouch\nRage (stun): taunt when the Rage Meter is full to stun nearby enemies."
+	}
+	"vsh_help_vagineer"
+	{
+		"en"	"Vagineer:\nSuper Jump: crouch, look up and stand up.\nWeigh-down: in midair, look down and crouch\nRage (uber): taunt when the Rage Meter is full to stun fairly close-by enemies."
+	}
+	"vsh_help_hhh"
+	{
+		"en"	"Horseless Headless Horsemann Jr.:\nTeleporter: crouch, look up and stand up.\nWeigh-down: in midair, look down and crouch\nRage (stun): taunt when Rage Meter is full to stun nearby enemies."
+	}
+	"vsh_help_cbs"
+	{
+		"en"	"Christian Brutal Sniper:\nSuper Jump: crouch, look up and stand up.\nWeigh-down: in midair, look down and crouch\nRage (bow): taunt when Rage Meter is full (9 arrows).\nVery close-by enemies are stunned."
+	}
+	"vsh_respawn_on_medieval"
+	{
+		"en"	"In Medieval Mode team members will respawn after death."
+	}
+	"vsh_help_scout"
+	{
+		"en"	"The Crit-a-Cola grants criticals instead of minicrits.\nThe Fan O' War removes 5pct rage on hit.\nPistols gain minicrits.\nCandycane drops a health pack on hit."
+	}
+	"vsh_help_soldier"
+	{
+		"en"	"The Battalion's Backup fills its meter when hit. Its buff causes nearby teammates to take very little damage.\nThe Half-Zatoichi heals 35HP on hit and can overheal to +25. Honorbound is removed on hit.\nBoot weapons lessen fall damage.\nAll guns minicrit Hale in midair.\nDirect Hit crits where it would minicrit.\nReserve Shooter has faster weapon switch and slight damage buff.\nMantreads create greater rocketjumps and deal 5x stomp damage."
+	}
+	"vsh_help_pyro"
+	{
+		"en"	"The Axetinguisher is replaced with the Fire Axe.\nThe Flare Gun is replaced by the MegaDetonator.\nAirblasting the boss builds rage and lengthens the Vagineer's uber.\nThird Degree gains uber for healers on hit."
+	}
+	"vsh_help_demo"
+	{
+		"en"	"The shields block one hit from Hale.\nUsing the shields grants criticals.\nEyelander/reskins gain heads on hit.\nThe Half-Zatoichi heals 35HP on hit and can overheal to +25. Honorbound is removed on hit."
+	}
+	"vsh_help_heavy"
+	{
+		"en"	"Natascha, the KGB, and the Fists of Steel are replaced with the\nMinigun, Gloves of Running, and Fists, respectively.\nThe Gloves of Running are quite quick but cause you to lose more health.\nThe Holiday Punch will remove any stun on you if you hit Hale while stunned."
+	}
+	"vsh_help_eggineer"
+	{
+		"en"	"All maps have only small ammo packs.\nThe Frontier Justice gains crits only while your sentry is targetting Hale.\nThe Eureka Effect is disabled for now."
+	}
+	"vsh_help_medic"
+	{
+		"en"	"Charge: Kritz+Uber. Charge starts at 40percent.\nCharge lasts for 150 percent after activation.\nSyringe Guns: on hit: +5 to ubercharge, Overdose speed effect.\nCrossbow: 100 percent crits, +150pct damage, +10 uber on hit."
+	}
+	"vsh_help_sniper"
+	{
+		"en"	"If not using Bushwacka, all weapons crit.\nJarate removes 8pct rage.\nBack-equipped weapons are replaced with SMG.\nSniper Rifle causes Hale to glow. Glow time scales with charge.\nBushwacka climbs walls, but removes rifle crits, has slower rate of fire."
+	}
+	"vsh_help_spie"
+	{
+		"en"	"Backstab does about 10 percent of Hale's max health.\nCloaknDagger replaced with normal watch.\nAll revolvers minicrit.\nYour Eternal Reward backstabs will disguise you.\nKunai backstabs will get you a health bonus."
+	}
+	"vsh_help_melee"
+	{
+		"en"	"All melee weapons (except the Spy knives) deal critical hits."
+	}
+	"vsh_thequeue"
+	{
+		"en"	"Saxton Hale's Queue:"
+	}
+	"vsh_curret_hale_is"
+	{
+		"en"	"The Current Hale is:"
+	}
+	"vsh_menu_1"
+	{
+		"en"	"What do you want, sir?"
+	}
+	"vsh_menu_2"
+	{
+		"en"	"Show Hale's health (/halehp)"
+	}
+	"vsh_menu_3"
+	{
+		"en"	"Show help about the mode (/halehelp)"
+	}
+	"vsh_menu_4"
+	{
+		"en"	"What's new?(/halenew)"
+	}
+	"vsh_menu_5"
+	{
+		"en"	"Who is the next Hale? (/halenext)"
+	}
+	"vsh_menu_exit"
+	{
+		"en"	"Exit"
+	}
+	"vsh_whatsnew"
+	{
+		"en"	"What's new:"
+	}
+	"vsh_help_mode"
+	{
+		"en"	"Welcome to VS Saxton Hale Mode!\nOne player is selected each round to be Saxton Hale.\nEveryone else must kill them!"
+	}
+	"vsh_older"
+	{
+		"en"	"Older"
+	}
+	"vsh_noolder"
+	{
+		"en"	"None Older"
+	}
+	"vsh_newer"
+	{
+		"en"	"Newer"
+	}
+	"vsh_nonewer"
+	{
+		"en"	"None Newer"
+	}
+	"vsh_menu_7"
+	{
+		"en"	"Show help about your class (/haleclass)"
+	}
+	"vsh_damage_fx"
+	{
+		"en"	"Damage Dealt:"
+	}
+	"vsh_new_update"
+	{
+		"en"	"A new update was released!"
+	}
+	"vsh_scores"
+	{
+		"en"	"Score for this round:"
+	}
+	"vsh_airblast"
+	{
+		"#format" "{1:i}"
+		"en"	"Airblast will be reloaded after {1} seconds"
+	}
+	"vsh_your_points"
+	{
+		"en"    "Your queue points:"
+	}
+	"vsh_add_points"
+	{
+		"#format" "{1:i}"
+		"en"    "You get {1} queue points."
+	}
+	"vsh_to0"
+	{
+		"en"	"select to set to 0"
+	}	
+	"vsh_to0_title"
+	{
+		"en"	"Are you sure you want to set your queue points to 0?"
+	}	
+	"vsh_to0_done"
+	{
+		"en"	"You have reset your queue points to {olive}0{default}"
+	}
+	"vsh_to0_near"
+	{
+		"en"	"You are going to be Hale soon! Type {olive}/halenext{default} to check/reset your queue points."
+	}
+	"vsh_queue_disabled"
+	{
+		"en"	"Queue is disabled on this server."
+	}
+	"vsh_first_round"
+	{
+		"en"	"Normal round while waiting for everyone to finish loading."
+	}
+	"vsh_already_see"
+	{
+		"en"	"You can already see his health!"
+	}
+	"vsh_hale_disconnected"
+	{
+		"en"	"Hale just disconnected!"
+	}
+	"vsh_used_weighdown"
+	{
+		"en"	"You just used your weighdown!"
+	}
+	"vsh_music"
+	{
+		"#format" "{1:s}"
+		"en"	"You've turned {1} the VS Saxton Hale music."
+	}
+	"vsh_voice"
+	{
+		"#format" "{1:s}"
+		"en"	"You've turned {1} the VS Saxton Hale voices. Intro, end, rage, jump, and backstab lines will always play to alert you to important events."
+	}
+	"vsh_voice2"
+	{
+		"en"	"Several other sounds will still play, but will be much quieter."
+	}
+	"vsh_menu_8"
+	{
+		"en"	"Music Options (/halemusic)"
+	}
+	"vsh_menu_9"
+	{
+		"en"	"Voice Options (/halevoice)"
+	}
+	"vsh_menu_9a"
+	{
+		"en"	"Show/Hide Class Info (/haleclassinfotoggle)"
+	}
+	"vsh_menu_10"
+	{
+		"en"	"VSH Achievements (/haleach)"
+	}
+	"vsh_menu_11"
+	{
+		"en"	"VSH Achievement Stats (/haleach_stats)"
+	}
+	"vsh_classinfo"
+	{
+		"#format" "{1:s}"
+		"en"	"You've turned {1} the VS Saxton Hale classinfo."
+	}
+	"vsh_last_update"
+	{
+		"#format" "{1:s},{2:s}"
+		"en"	"What's new in v.{olive}{1}{default} ({olive}{2}{default})? Type {olive}/halenew{default}"
+	}
+}

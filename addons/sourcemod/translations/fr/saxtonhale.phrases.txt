@@ -1,0 +1,351 @@
+﻿"Phrases"
+{
+	"needmoreplayers"
+	{
+		"fr"    "Le mode VS Saxton Hale est désactivé. Il faut plus de joueurs."
+	}
+	"type_hale_to_open_menu"
+	{
+		"fr"	"Écrivez {olive}/hale{default} dans le chat pour ouvrir le menu du mod."
+	}
+	"nextmap_hale"
+	{
+		"fr"	"La prochaine map de {olive}VS Saxton Hale{default} sera {olive}{1}{default}"
+	}
+	"hale_is_alive"
+	{
+		"fr"	"Saxton Hale ({1})\navait {2} (sur {3}) PV restants."
+	}
+	"vagineer_is_alive"
+	{
+		"fr"	"Vagineer ({1})\navait {2} (sur {3}) PV restants."
+	}
+	"hhh_is_alive"
+	{
+		"fr"	"Horsless Headless Horsemann Jr. ({1})\navait {2} (sur {3}) PV restants."
+	}
+	"cbs_is_alive"
+	{
+		"fr"	"Christian Brutal Sniper ({1})\navait {2} (sur {3}) PV restants."
+	}
+	"hale_show_hp"
+	{
+		"fr"	"Saxton Hale révèle ses PV restants: {1} sur {2}"
+	}
+	"vagineer_show_hp"
+	{
+		"fr"	"Vagineer révèle ses PV restants: {1} sur {2}"
+	}
+	"hhh_show_hp"
+	{
+		"fr"	"Horsless Headless Horsemann Jr. révèle ses PV restants: {1} sur {2}"
+	}
+	"cbs_show_hp"
+	{
+		"fr"	"Christian Brutal Sniper révèle ses PV restants: {1} sur {2}"
+	}
+	"hale_hp"
+	{
+		"fr"	"Saxton Hale a {1} PV sur {2}"
+	}
+	"vagineer_hp"
+	{
+		"fr"	"Vagineer a {1} PV sur {2}"
+	}
+	"hhh_hp"
+	{
+		"fr"	"Horsless Headless Horsemann Jr. a {1} PV sur {2}"
+	}
+	"cbs_hp"
+	{
+		"fr"	"Christian Brutal Sniper a {1} PV sur {2}"
+	}
+	"can_not_see_hp"
+	{
+		"fr"	"Vous ne pouvez plus vérifier ses PV durant ce round (pas plus de 3 fois par round)"
+	}
+	"wait_hp"
+	{
+		"fr"	"Vous ne pouvez pas vérifier ses PV pour l'instant (attendez {1} seconde(s)). Santé connaissent dernière a été {2}."
+	}
+	"hale_select_text"
+	{
+		"fr"	"deviendra Saxton Hale au prochain round"
+	}
+	"damage"
+	{
+		"fr"	"Vous avez infligé {1} dégats"
+	}
+	"point_enable"
+	{
+		"fr"	"{1} joueurs restants - point de contrôle activé!"
+	}
+	"queue"
+	{
+		"fr"	"La file d'attente sera générée après {1} rounds"
+	}
+	"skip_hale"
+	{
+		"fr"	"Vous devez être le prochain Hale pour accéder à ce menu."
+	}
+	"skip_hale_2"
+	{
+		"fr"	"Vous avez changé d'avis pour être Saxton Hale? Écrivez {olive}/haleme{default} dans le chat."
+	}
+	"skip_hale_q"
+	{
+		"fr"	"Êtes-vous prêt pour être Saxton Hale au prochain round?"
+	}
+	"skip_hale_da"
+	{
+		"fr"	"Oui, Je suis prêt."
+	}
+	"skip_hale_niet"
+	{
+		"fr"	"Non, Je ne veux pas."
+	}
+	"top_3"
+	{
+		"fr"	"Le plus de dégats ont été infligés par"
+	}
+	"start_hale"
+	{
+		"fr"	"{1} est devenu\nSaxton Hale\navec {2} PV."
+	}
+	"start_vagineer"
+	{
+		"fr"	"==ROUND SPÉCIAL==\n{1} est devenu\nVAGINEER\navec {2} PV."
+	}
+	"start_hhh"
+	{
+		"fr"	"==ROUND SPÉCIAL==\n{1} est devenu\nHorsless Headless Horsemann Jr.\navec {2} PV."
+	}
+	"start_cbs"
+	{
+		"fr"	"==ROUND SPÉCIAL==\n{1} est devenu\nChristian Brutal Sniper\navec {2} PV."
+	}
+	"uber-charge"
+	{
+		"fr"	"Über-charge"
+	}
+	"health"
+	{
+		"fr"	"Santé: {1} PV sur {2}"
+	}
+	"do_rage"
+	{
+		"fr"	"Faites une raillerie pour déclencher votre RAGE."
+	}
+	"rage_meter"
+	{
+		"fr"	"RAGE-o-mètre: {1} pourcents"
+	}
+	"super_duper_jump"
+	{
+		"fr"	"Le Super Duper Saut est Prêt!"
+	}
+	"teleport_status"
+	{
+		"fr"	"Chargement de la Téléportation: {1} pourcents. Activez là à 100 pourcents en vous dressant vers le haut."
+	}
+	"jump_status"
+	{
+		"fr"	"Chargement du Saut: {1} pourcents. Dressez vous en rgardant vers le haut pour faire un super-saut."
+	}
+	"teleport_status_2"
+	{
+		"fr"	"La téléportation sera de nouveau prête dans"
+	}
+	"jump_status_2"
+	{
+		"fr"	"Le super saut sera de nouveau prêt dans"
+	}
+	"help_hale"
+	{
+		"fr"	"===Saxton Hale===\nSuper Saut: Accroupissez-vous, regardez vers le haut et redressez-vous.\nRage (étourdissement): faites une raillerie lorsque votre RAGE-o-mètre est plein."
+	}
+	"help_vagineer"
+	{
+		"fr"	"===Vagineer===\nSuper Saut: Accroupissez-vous, regardez vers le haut et redressez-vous.\nRage (über): faites une raillerie lorsque votre RAGE-o-mètre est plein. Étourdis les ennemis proches."
+	}
+	"help_hhh"
+	{
+		"fr"	"===Horseless Headless Horsemann Junior===\nTéléportation: Accroupissez-vous, regardez vers le haut et redressez-vous.\nRage (étourdissement): faites une raillerie lorsque votre RAGE-o-mètre est plein."
+	}
+	"help_cbs"
+	{
+		"fr"	"===Christian Brutal Sniper===\nSuper Saut: Accroupissez-vous, regardez vers le haut et redressez-vous.\nRage (huntsman): faites une raillerie lorsque votre RAGE-o-mètre est plein. Vous avez 9 flèches par rages. Étourdis les ennemis proches."
+	}
+	"respawn_on_medieval"
+	{
+		"fr"	"En mode Médiéval les mercenaires réapparaitrons après la mort."
+	}
+	"help_scout"
+	{
+		"fr"	"Le Crit-A-Cola donne des coups critiques au lieu de mini-crits.\nÉradicateur remplacé par le Soda Popper. pas d'Évent-taille."
+	}
+	"help_soldier"
+	{
+		"fr"	"Le bataillon de soutien est remplacé par un fusil à pompe."
+	}
+	"help_pyro"
+	{
+		"fr"	""
+	}
+	"help_demo"
+	{
+		"fr"	"Le bouclier bélier protège d'un coup de Hale.\nL'Eyelander et le Demi-Zatoichi ne sont pas autorisés."
+	}
+	"help_heavy"
+	{
+		"fr"	"Natasha, les KGB et poings d'acier ne sont pas autorisés."
+	}
+	"help_eggineer"
+	{
+		"fr"	"Il n'y a que de petits packs de munitions.\nLa Justice Frontalière est remplacée par un fusil à pompes."
+	}
+	"help_medic"
+	{
+		"fr"	"Le Médigun a crits+über+chargement rapide. L'Arbalète du Croisé inflige 450 dégats."
+	}
+	"help_sniper"
+	{
+		"fr"	"Vos armes n'infligent que des coups critiques. Le Fusil de Sniper marque Hale pendant 5 secondes.\nL'arme secondaire est la mitraillette."
+	}
+	"help_spie"
+	{
+		"fr"	"Le poignardage inflige ~10 pourcents de la santé maximum de Hale en dégats. Cloak and Dagger remplacée par la montre d'invisiblilté."
+	}
+	"help_melee"
+	{
+		"fr"	"Toutes les armes de mêlée (à part celles du Spy) infligent des coups critiques."
+	}
+	"thequeue"
+	{
+		"fr"	"File d'attente de Saxton Hale"
+	}
+	"curret_hale_is"
+	{
+		"fr"	"Le Hale actuel est"
+	}
+	"menu_1"
+	{
+		"fr"	"Que souhaitez-vous, monsieur?"
+	}
+	"menu_2"
+	{
+		"fr"	"Révéler la santé de Hale ({olive}/halehp{default})."
+	}
+	"menu_3"
+	{
+		"fr"	"Afficher le menu d'aide du mod ({olive}/halehelp{default})."
+	}
+	"menu_4"
+	{
+		"fr"	"Quoi de neuf? ({olive}/halenew{default})."
+	}
+	"menu_5"
+	{
+		"fr"	"Qui sera le prochain Hale? ({olive}/halenext{default})."
+	}
+	"menu_6"
+	{
+		"fr"	"Quitter"
+	}
+	"whatsnew"
+	{
+		"fr"	"Quoi de neuf dans la v."
+	}
+	"help_mode"
+	{
+		"fr"	"===Mode VS Saxton Hale===\nTous les joueurs deviennent chacun à leur tour\nSaxon Hale, PDG de Mann. Co.\net marchand d'armes préféré des mercenaires de TF2.\nLes autres joueurs doivent le tuer ou capturer de point de contrôle."
+	}
+	"older"
+	{
+		"fr"	"Précédent"
+	}
+	"noolder"
+	{
+		"fr"	"Rien de plus ancien"
+	}
+	"newer"
+	{
+		"fr"	"Nouveau"
+	}
+	"nonewer"
+	{
+		"fr"	"Rien de plus récent"
+	}
+	"menu_7"
+	{
+		"fr"	"Montrer l'aide concernant cette classe dans ce mod ({olive}/haleclass{default})."
+	}
+	"damage_fx"
+	{
+		"fr"	"Vous avez infligé:"
+	}
+	"scores"
+	{
+		"fr"	"Votre score ce round est de:"
+	}
+	"airblast"
+	{
+		"fr"	"Airblast will be reloaded after {1} seconds"
+	}
+	"your_points"
+	{
+		"fr"    "Your queue points:"
+	}
+	"add_points"
+	{
+		"fr"    "You get {1} queue points."
+	}
+	"to0"
+	{
+		"fr"	"select to set to 0"
+	}	
+	"to0_title"
+	{
+		"fr"	"Are you sure you want to set your queue points to 0?"
+	}	
+	"to0_done"
+	{
+		"fr"	"You have reset your queue points to {olive}0{default}"
+	}
+	"to0_near"
+	{
+		"fr"	"You are going to be Hale soon! Type {olive}/halenext{default} to check/reset your queue points."
+	}
+	"queue_disabled"
+	{
+		"fr"	"Queue is disabled on this server."
+	}
+	"first_round"
+	{
+		"fr"	"Normal round while waiting for everyone to finish loading."
+	}
+	"already_see"
+	{
+		"fr"	"You can already see his health!"
+	}
+	"hale_disconnected"
+	{
+		"fr"	"Hale just disconnected!"
+	}
+	"used_weighdown"
+	{
+		"fr"	"You just used your weighdown!"
+	}
+	"vsh_music"
+	{
+		"fr"	"You've turned {1} the VS Saxton Hale music."
+	}
+	"vsh_voice"
+	{
+		"fr"	"You've turned {1} the VS Saxton Hale voices. Intro, end, rage, jump, and backstab lines will always play to alert you to important events."
+	}
+	"vsh_voice2"
+	{
+		"fr"	"Several other sounds will still play, but will be much quieter."
+	}
+}
