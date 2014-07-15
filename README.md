@@ -3,6 +3,8 @@ Versus-Saxton-Hale
 
 The presuccessor of FF2(FF2 is the successor of VSH)
 
+[![Build Status](https://travis-ci.org/WildCard65/Versus-Saxton-Hale.svg?branch=master)](https://travis-ci.org/WildCard65/Versus-Saxton-Hale)
+
 ===For first/fresh installs===
 Copy the 'addons' folder to the server's 'tf/' folder.
 The 'scripting' folder within is entirely unnecessary unless you are a modder or want to disable the easter boss.
