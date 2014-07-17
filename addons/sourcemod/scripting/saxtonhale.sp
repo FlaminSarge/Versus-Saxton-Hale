@@ -5,6 +5,7 @@ Notoriously famous for creating plugins with terrible code and then abandoning t
 
 FlaminSarge - He makes cool things. He improves on terrible things until they're good.
 Chdata - A Hale enthusiast with a good understanding of this mod's balance between all classes, and a coder.
+nergal - Added some very nice features to the plugin and fixed important bugs.
 
 New plugin thread on AlliedMods: https://forums.alliedmods.net/showthread.php?p=2167912
 */
@@ -1134,7 +1135,7 @@ public Action:Timer_Announce(Handle:hTimer)
             }
             case 3:
             {
-                CPrintToChatAll("{default}===VS Saxton Hale v.%s by {olive}Rainbolt Dash{default} and {olive}FlaminSarge{default}===", haleversiontitles[maxversion]);
+                CPrintToChatAll("{default}VSH v.%s by {olive}Rainbolt Dash{default}, {olive}FlaminSarge{default}, & {lightsteelblue}Chdata{default}.", haleversiontitles[maxversion]);
             }
             case 5:
             {
@@ -3501,8 +3502,6 @@ public Action:ClientTimer(Handle:hTimer)
                 else TF2_AddCondition(client, TFCond_DeadRingered, 0.3);
             }
 
-            if (class == TFClass_Soldier && index == 1104) SetEntProp(client, Prop_Send, "m_iDecapitations", Damage[client]/500);
-
 //          if (TF2_IsPlayerInCondition(client, TFCond_DefenseBuffed)) TF2_AddCondition(client, TFCond_Ubercharged, 0.3);
             if (class == TFClass_Medic)
             {
@@ -4612,6 +4611,7 @@ public Action:event_hurt(Handle:event, const String:name[], bool:dontBroadcast)
     if (custom == TF_CUSTOM_TELEFRAG) SetEventInt(event, "damageamount", damage);
 
     Damage[attacker] += damage;
+
     new healers[MAXPLAYERS];
     new healercount = 0;
     for (new i = 1; i <= MaxClients; i++)
@@ -4622,16 +4622,17 @@ public Action:event_hurt(Handle:event, const String:name[], bool:dontBroadcast)
             healercount++;
         }
     }
-    for (new i = 0; i < healercount; i++)
+    for (new i = 0; i < healercount; i++) // Medics now count as 3/5 of a backstab, similar to telefrag assists.
     {
         if (IsValidClient(healers[i]) && IsPlayerAlive(healers[i]))
         {
             if (damage < 10 || uberTarget[healers[i]] == attacker)
-                Damage[healers[i]] += damage;
+                Damage[healers[i]] += RoundFloat(float(damage)*(custom == TF_CUSTOM_BACKSTAB ? 3/5:1));
             else
-                Damage[healers[i]] += damage/(healercount+1);
+                Damage[healers[i]] += RoundFloat(float(damage)*(custom == TF_CUSTOM_BACKSTAB ? 3/5:1)/(healercount+1));
         }
     }
+
     if (HaleRage > RageDMG)
         HaleRage = RageDMG;
     return Plugin_Continue;
@@ -4835,6 +4836,7 @@ public Action:OnTakeDamage(client, &attacker, &inflictor, &Float:damage, &damage
                             HaleRage = 0;
                     }
                     case 132, 266, 482: IncrementHeadCount(attacker);
+                    case 1104: SetEntProp(client, Prop_Send, "m_iDecapitations", Damage[client]/200); // Air Strike
                     case 317: SpawnSmallHealthPackAt(client, GetClientTeam(attacker));
                     case 214:
                     {
@@ -4954,16 +4956,10 @@ public Action:OnTakeDamage(client, &attacker, &inflictor, &Float:damage, &damage
                      Weaker against high HP Hale (but still good).
 
                     */
-                    new Float:changedamage = (float(HaleHealthMax)*0.073687) + 756.089024 - (float(HaleHealthMax)*(Stabbed/100));
-                    new iChangeDamage = RoundFloat(changedamage);
+                    new Float:changedamage = (float(HaleHealthMax)*0.073687) + 756.089024 - float(HaleHealthMax)*(Stabbed/100);
+                    //new iChangeDamage = RoundFloat(changedamage);
 
                     damage = changedamage/3;            // You can level "damage dealt" with backstabs
-
-                    if (HaleHealth <= iChangeDamage)    // You can never level "full health kills" via backstab on Hale
-                    {
-                        HaleHealth = 32;
-                        SetEntProp(Hale, Prop_Send, "m_iHealth", 32);
-                    }
 
                     /*Damage[attacker] += iChangeDamage;
                     if (HaleHealth > iChangeDamage) damage = 0.0;
@@ -5005,10 +5001,9 @@ public Action:OnTakeDamage(client, &attacker, &inflictor, &Float:damage, &damage
                     SetEventBool(stabevent, "allseecrit", true);
                     SetEventInt(stabevent, "weaponid", TF_WEAPON_KNIFE);
                     FireEvent(stabevent);*/
-                    new pistol = GetPlayerWeaponSlot(attacker, TFWeaponSlot_Primary);
-                    new piston = GetEntProp(pistol, Prop_Send, "m_iItemDefinitionIndex");
+                    new pistol = GetIndexOfWeaponSlot(attacker, TFWeaponSlot_Primary);
 
-                    if (piston == 525) //Diamondback gives 3 crits on backstab
+                    if (pistol == 525) //Diamondback gives 3 crits on backstab
                     {
                         new iCrits = GetEntProp(attacker, Prop_Send, "m_iRevengeCrits");
                         SetEntProp(attacker, Prop_Send, "m_iRevengeCrits", iCrits+2);
@@ -5058,9 +5053,9 @@ public Action:OnTakeDamage(client, &attacker, &inflictor, &Float:damage, &damage
                             EmitSoundToAllExcept(SOUNDEXCEPT_VOICE, s, _, SNDCHAN_ITEM, SNDLEVEL_TRAFFIC, SND_NOFLAGS, SNDVOL_NORMAL, 100, Hale, NULL_VECTOR, NULL_VECTOR, false, 0.0);
                         }
                     }
-                    if (Stabbed < 5)
+                    if (Stabbed < 6)
                         Stabbed++;
-                    new healers[MAXPLAYERS];
+                    /*new healers[MAXPLAYERS]; // Medic assist unnecessary due to being handled in player_hurt now.
                     new healercount = 0;
                     for (new i = 1; i <= MaxClients; i++)
                     {
@@ -5079,7 +5074,7 @@ public Action:OnTakeDamage(client, &attacker, &inflictor, &Float:damage, &damage
                             else
                                 Damage[healers[i]] += RoundFloat(changedamage/(healercount+1));
                         }
-                    }
+                    }*/
                     return Plugin_Changed;
                 }
 
@@ -5800,12 +5795,13 @@ stock FindVersionData(Handle:panel, versionindex)
             DrawPanelText(panel, "10) Festive flare gun now acts like mega-detonator.");
             DrawPanelText(panel, "11) Medic crossbow now gives 15pct uber instead of 10.");
             DrawPanelText(panel, "12) Festive crossbow is fixed to be like normal crossbow.");
+            DrawPanelText(panel, "13) Medics now get 3/5 the damage of a backstab for assisting.");
             DrawPanelText(panel, "---) This version courtesy of the TF2Data community.");
         }
         case 51: //1.43
         {
             DrawPanelText(panel, "1) Backstab formula rebalanced to do better damage to lower HP Hales.");
-            DrawPanelText(panel, "2) Damage Dealt and Full Health Kills now work properly with backstabs.");
+            DrawPanelText(panel, "2) Damage Dealt now work properly with backstabs.");
             DrawPanelText(panel, "3) Slightly reworked Hale health formula.");
             DrawPanelText(panel, "4) (Anchor) Bosses take no pushback from damage while ducking on the ground.");
             DrawPanelText(panel, "5) Short circuit blocked until further notice.");
