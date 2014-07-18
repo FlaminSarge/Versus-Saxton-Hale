@@ -13,11 +13,16 @@ install:
     - SMPACKAGE=`lynx -dump "$SMURL" | egrep -o "$SMPATTERN" | tail -1`
     - wget $SMPACKAGE
     - tar -xzf $(basename "$SMPACKAGE")
-    - TF2ITEMSURL="http://builds.limetech.org/files/"
+    - ASHERKINURL="http://builds.limetech.org/files/"
     - TF2ITEMSPATTERN="http:.*tf2items-.*-.*-linux.zip"
-    - TF2ITEMSPACKAGE=`lynx -dump "$TF2ITEMSURL" | egrep -o "$TF2ITEMSPATTERN" | tail -1`
+    - TF2ITEMSPACKAGE=`lynx -dump "$ASHERKINURL" | egrep -o "$TF2ITEMSPATTERN" | tail -1`
     - wget $TF2ITEMSPACKAGE
     - unzip $(basename "$TF2ITEMSPACKAGE")
+    - STEAMTOOLSPATTERN="http:.*steamtools-.*-git.*-.*-linux.zip"
+    - STEAMTOOLSPACKAGE=`lynx -dump "$ASHERKINURL" | egrep -o "$STEAMTOOLSPATTERN" | tail -1`
+    - wget $STEAMTOOLSPACKAGE
+    - unzip $(basename "$STEAMTOOLSPACKAGE")
+    - cd addons/sourcemod
 before_script:
     - cd addons/sourcemod/scripting/
     - wget "https://www.doctormckay.com/download/scripting/include/morecolors.inc"
