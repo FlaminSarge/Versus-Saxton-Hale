@@ -24,7 +24,7 @@ install:
     - unzip $(basename "$STEAMTOOLSPACKAGE")
     - cd addons/sourcemod
 before_script:
-    - cd addons/sourcemod/scripting/
+    - cd ./scripting/
     - wget "https://www.doctormckay.com/download/scripting/include/morecolors.inc"
     - mv morecolors.inc include/
     - chmod +x spcomp
