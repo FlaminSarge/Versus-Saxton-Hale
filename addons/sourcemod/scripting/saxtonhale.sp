@@ -28,7 +28,7 @@ New plugin thread on AlliedMods: https://forums.alliedmods.net/showthread.php?p=
 #define EF_BONEMERGE            (1 << 0)
 #define EF_BONEMERGE_FASTCULL   (1 << 7)
 
-#define PLUGIN_VERSION "1.44"
+#define PLUGIN_VERSION "1.45"
 
 #define HALEHHH_TELEPORTCHARGETIME 2
 #define HALE_JUMPCHARGETIME 1
@@ -213,6 +213,7 @@ enum
     VSHSpecial_Bunny //ohgodwhy
 }
 new Damage[MAXPLAYERS + 1];
+new AirDamage[MAXPLAYERS + 1]; // Air Strike
 new curHelp[MAXPLAYERS + 1];
 new uberTarget[MAXPLAYERS + 1];
 #define VSHFLAG_HELPED          (1 << 0)
@@ -230,6 +231,7 @@ new HaleCharge = 0;
 new HaleRage;
 new NextHale;
 new Float:Stabbed;
+new Float:Marketed;
 new Float:HPTime;
 new Float:KSpreeTimer;
 new Float:WeighDownTimer;
@@ -237,6 +239,7 @@ new KSpreeCount = 1;
 new Float:UberRageCount;
 new Float:GlowTimer;
 new bool:bEnableSuperDuperJump;
+new bool:bTenSecStart;
 new Handle:cvarVersion;
 new Handle:cvarHaleSpeed;
 new Handle:cvarPointDelay;
@@ -286,6 +289,8 @@ new tf_arena_first_blood;
 new mp_forcecamera;
 new Float:tf_scout_hype_pep_max;
 new defaulttakedamagetype;
+
+new bool:g_bClientRJFlag[MAXPLAYERS+1] = { false, ... };
 
 static const String:haleversiontitles[][] =     //the last line of this is what determines the displayed plugin version
 {
@@ -342,7 +347,11 @@ static const String:haleversiontitles[][] =     //the last line of this is what 
     "1.43",
     "1.43",
     "1.44",
-    "1.44"
+    "1.44",
+    "1.45",
+    "1.45",
+    "1.45",
+    "1.45"
 };
 static const String:haleversiondates[][] =
 {
@@ -399,7 +408,11 @@ static const String:haleversiondates[][] =
     "15 Jul 2014",
     "15 Jul 2014",
     "15 Jul 2014",
-    "15 Jul 2014"
+    "15 Jul 2014",
+    "17 Jul 2014",
+    "17 Jul 2014",
+    "17 Jul 2014",
+    "17 Jul 2014"
 };
 static const maxversion = (sizeof(haleversiontitles) - 1);
 new Handle:OnHaleJump;
@@ -407,7 +420,7 @@ new Handle:OnHaleRage;
 new Handle:OnHaleWeighdown;
 new Handle:OnMusic;
 
-new Handle:hEquipWearable;
+//new Handle:hEquipWearable;
 new Handle:hSetAmmoVelocity;
 
 /*new Handle:OnIsVSHMap;
@@ -549,6 +562,9 @@ public OnPluginStart()
     HookEvent("player_hurt", event_hurt, EventHookMode_Pre);
     HookEvent("object_destroyed", event_destroy, EventHookMode_Pre);
     HookEvent("object_deflected", event_deflect, EventHookMode_Pre);
+    HookEvent( "rocket_jump", OnHookedEvent );
+    HookEvent( "rocket_jump_landed", OnHookedEvent );
+    HookEvent( "player_death", OnHookedEvent );
     HookUserMessage(GetUserMessageId("PlayerJarated"), event_jarate);
     HookConVarChange(cvarEnabled, CvarChange);
     HookConVarChange(cvarHaleSpeed, CvarChange);
@@ -587,6 +603,7 @@ public OnPluginStart()
     AddCommandListener(DoTaunt, "+taunt");
     AddCommandListener(DoSuicide, "explode");
     AddCommandListener(DoSuicide, "kill");
+    AddCommandListener(DoSuicide2, "jointeam");
     AddCommandListener(Destroy, "destroy");
     RegAdminCmd("hale_select", Command_HaleSelect, ADMFLAG_CHEATS, "hale_select <target> - Select a player to be next boss");
     RegAdminCmd("hale_special", Command_MakeNextSpecial, ADMFLAG_CHEATS, "Call a special to next round.");
@@ -612,6 +629,7 @@ public OnPluginStart()
     {
         VSHFlags[client] = 0;
         Damage[client] = 0;
+        AirDamage[client] = 0;
         uberTarget[client] = -1;
         if (IsValidClient(client, false)) SDKHook(client, SDKHook_OnTakeDamage, OnTakeDamage);
     }
@@ -1037,7 +1055,8 @@ public AddToDownload()
     PrecacheSound("vo/halloween_boss/knight_pain03.wav", true);
     PrecacheSound("vo/halloween_boss/knight_death01.wav", true);
     PrecacheSound("vo/halloween_boss/knight_death02.wav", true);
-    PrecacheSound("weapons/barret_arm_zap.wav", true);
+    //PrecacheSound("weapons/barret_arm_zap.wav", true);
+    PrecacheSound("player/doubledonk.wav", true);
 #if defined EASTER_BUNNY_ON
     for (i = 0; i < sizeof(BunnyWin); i++)
     {
@@ -1135,7 +1154,7 @@ public Action:Timer_Announce(Handle:hTimer)
             }
             case 3:
             {
-                CPrintToChatAll("{default}VSH v.%s by {olive}Rainbolt Dash{default}, {olive}FlaminSarge{default}, & {lightsteelblue}Chdata{default}.", haleversiontitles[maxversion]);
+                CPrintToChatAll("{default}VSH v%s by {olive}Rainbolt Dash{default}, {olive}FlaminSarge{default}, & {lightsteelblue}Chdata{default}.", haleversiontitles[maxversion]);
             }
             case 5:
             {
@@ -1423,6 +1442,7 @@ public Action:event_round_start(Handle:event, const String:name[], bool:dontBroa
     for (new ionplay = 1; ionplay <= MaxClients; ionplay++)
     {
         Damage[ionplay] = 0;
+        AirDamage[ionplay] = 0;
         uberTarget[ionplay] = -1;
         if (IsValidClient(ionplay))
         {
@@ -1501,11 +1521,14 @@ public Action:event_round_start(Handle:event, const String:name[], bool:dontBroa
     {
         Hale = tHale;
     }
+    bTenSecStart = true;
+    CreateTimer(29.1, TenSecStart);
     CreateTimer(9.1, StartHaleTimer);
     CreateTimer(3.5, StartResponceTimer);
     CreateTimer(9.6, MessageTimer, 9001);
     HaleRage = 0;
     Stabbed = 0.0;
+    Marketed = 0.0;
     new ent = -1;
     decl Float:pos[3];
     while ((ent = FindEntityByClassname2(ent, "func_regenerate")) != -1)
@@ -1728,7 +1751,7 @@ public Action:event_round_end(Handle:event, const String:name[], bool:dontBroadc
             SetHudTextParams(-1.0, 0.2, 10.0, 255, 255, 255, 255);
             for (new i = 1; i <= MaxClients; i++)
             {
-                if (IsValidClient(i))
+                if (IsValidClient(i) && !(GetClientButtons(i) & IN_SCORE))
                 {
                     ShowHudText(i, -1, "%T", translation, i, Hale, HaleHealth, HaleHealthMax);
                 }
@@ -1794,7 +1817,7 @@ public Action:event_round_end(Handle:event, const String:name[], bool:dontBroadc
         PrintCenterTextAll(""); //Should clear center text
         for (new i = 1; i <= MaxClients; i++)
         {
-            if (IsValidClient(i))
+            if (IsValidClient(i) && !(GetClientButtons(i) & IN_SCORE))
             {
                 SetGlobalTransTarget(i);
 //              if (numHaleKills < 2 && false) ShowHudText(i, -1, "%t\n1)%i - %s\n2)%i - %s\n3)%i - %s\n\n%t %i\n%t %i", "vsh_top_3", Damage[top[0]], s, Damage[top[1]], s1, Damage[top[2]], s2, "vsh_damage_fx", Damage[i], "vsh_scores", RoundFloat(Damage[i] / 600.0));
@@ -1880,6 +1903,10 @@ public Action:StartResponceTimer(Handle:hTimer)
         EmitSoundToAllExcept(SOUNDEXCEPT_VOICE, s, _, _, SNDLEVEL_TRAFFIC, SND_NOFLAGS, SNDVOL_NORMAL, 100, _, pos, NULL_VECTOR, false, 0.0);
     }
     return Plugin_Continue;
+}
+public Action:TenSecStart(Handle:hTimer)
+{
+    bTenSecStart = false;
 }
 public Action:StartHaleTimer(Handle:hTimer)
 {
@@ -2186,35 +2213,32 @@ public Action:Timer_SkipHalePanel(Handle:hTimer)
     }
     while (i < 3 && j < MAXPLAYERS + 1);
 }
-new rightchoice[MAXPLAYERS + 1] = { 0, ... };
+
 stock SkipHalePanelNotify(client, bool:newchoice = true)
 {
     if (!Enabled || !IsValidClient(client) || IsVoteInProgress())
+    {
         return;
+    }
+
     new Handle:panel = CreatePanel();
     decl String:s[256];
+
     SetPanelTitle(panel, "[VSH] You're Hale next!");
     Format(s, sizeof(s), "%t\nAlternatively, use !hale_resetq.", "vsh_to0_near");
     CRemoveTags(s, sizeof(s));
-//  ReplaceString(s, sizeof(s), "{olive}", "");
-//  ReplaceString(s, sizeof(s), "{default}", "");
-    DrawPanelText(panel, s);
-    DrawPanelText(panel, "");
-    DrawPanelText(panel, ">I've read this.");
-    if (newchoice) rightchoice[client] = GetRandomInt(0, 3);
-    for (new i = 0; i < 4; i++)
-    {
-        DrawPanelItem(panel, (i == rightchoice[client]) ? "Yes" : "No");
-    }
+
+    ReplaceString(s, sizeof(s), "{olive}", "");
+    ReplaceString(s, sizeof(s), "{default}", "");
+
+    DrawPanelItem(panel, s);
     SendPanelToClient(panel, client, SkipHalePanelH, 30);
     CloseHandle(panel);
+
+    return;
 }
 public SkipHalePanelH(Handle:menu, MenuAction:action, param1, param2)
 {
-    if (param2-1 != rightchoice[param1] && param1 == FindNextHaleEx())
-    {
-        SkipHalePanelNotify(param1, false);
-    }
     return;
 }
 public Action:EnableSG(Handle:hTimer, any:iid)
@@ -2274,12 +2298,12 @@ public Action:MessageTimer(Handle:hTimer, any:client)
         case VSHSpecial_CBS: strcopy(translation, sizeof(translation), "vsh_start_cbs");
         default: strcopy(translation, sizeof(translation), "vsh_start_hale");
     }
-    SetHudTextParams(-1.0, 0.4, 10.0, 255, 255, 255, 255);
-    if (client != 9001) //bad
+    SetHudTextParams(-1.0, 0.2, 10.0, 255, 255, 255, 255);
+    if (client != 9001 && !(GetClientButtons(client) & IN_SCORE)) //bad
         ShowHudText(client, -1, "%T", translation, client, Hale, HaleHealthMax);
     else
         for (new i = 1; i <= MaxClients; i++)
-            if (IsValidClient(i))
+            if (IsValidClient(i) && !(GetClientButtons(i) & IN_SCORE))
                 ShowHudText(i, -1, "%T", translation, i, Hale, HaleHealthMax);
     return Plugin_Continue;
 }
@@ -2472,9 +2496,9 @@ public Action:TF2Items_OnGiveNamedItem(client, String:classname[], iItemDefiniti
                 return Plugin_Changed;
             }
         }
-        case 224: //L'etranger
+        case 224: //Letranger
         {
-            new Handle:hItemOverride = PrepareItemHandle(hItem, _, _, "166 ; 15 ; 1 ; 0.8 ; 160 ; 1 ; 85 ; 0.75", true);
+            new Handle:hItemOverride = PrepareItemHandle(hItem, _, _, "166 ; 15 ; 1 ; 0.8 ; 160 ; 1", true);
 
             if (hItemOverride != INVALID_HANDLE)
             {
@@ -2534,13 +2558,14 @@ public Action:TF2Items_OnGiveNamedItem(client, String:classname[], iItemDefiniti
                 return Plugin_Changed;
             }
         }
-        case 226:
+        case 226: // The Battalion's Backup
         {
-//          new Handle:hItemOverride = PrepareItemHandle(hItem, _, _, "116 ; 4.0", true);
-            new Handle:hItemOverride = PrepareItemHandle(hItem, _, _, "140 ; 10.0");
+            new Handle:hItemOverride = PrepareItemHandle(hItem, _, _, "252 ; 0.25"); //125 ; -10
+
             if (hItemOverride != INVALID_HANDLE)
             {
                 hItem = hItemOverride;
+
                 return Plugin_Changed;
             }
         }
@@ -2562,7 +2587,7 @@ public Action:TF2Items_OnGiveNamedItem(client, String:classname[], iItemDefiniti
                 return Plugin_Changed;
             }
         }
-        case 38, 457:
+        case 38, 457: // Axetinguisher
         {
             new Handle:hItemOverride = PrepareItemHandle(hItem, _, _, "", true);
             if (hItemOverride != INVALID_HANDLE)
@@ -2580,7 +2605,7 @@ public Action:TF2Items_OnGiveNamedItem(client, String:classname[], iItemDefiniti
 //              return Plugin_Changed;
 //          }
 //      }
-        case 43, 239:
+        case 43, 239, 1100: // GRU
         {
             new Handle:hItemOverride = PrepareItemHandle(hItem, _, 239, "107 ; 1.5 ; 1 ; 0.5 ; 128 ; 1 ; 191 ; -7", true);
             if (hItemOverride != INVALID_HANDLE)
@@ -2591,10 +2616,12 @@ public Action:TF2Items_OnGiveNamedItem(client, String:classname[], iItemDefiniti
         }
         case 415:
         {
-            new Handle:hItemOverride = PrepareItemHandle(hItem, _, _, "265 ; 99999.0 ; 178 ; 0.6 ; 2 ; 1.1 ; 3 ; 0.5", true);
+            new Handle:hItemOverride = PrepareItemHandle(hItem, _, _, "179 ; 1 ; 265 ; 99999.0 ; 178 ; 0.6 ; 2 ; 1.1 ; 3 ; 0.5", true);
+
             if (hItemOverride != INVALID_HANDLE)
             {
                 hItem = hItemOverride;
+
                 return Plugin_Changed;
             }
         }
@@ -2705,7 +2732,7 @@ public Action:MakeNoHale(Handle:hTimer, any:clientid)
         index = GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex");
         switch (index)
         {
-            case 41:
+            case 41:    // ReplacelistPrimary
             {
                 TF2_RemoveWeaponSlot(client, TFWeaponSlot_Primary);
                 weapon = SpawnWeapon(client, "tf_weapon_minigun", 15, 1, 0, "");
@@ -2714,6 +2741,11 @@ public Action:MakeNoHale(Handle:hTimer, any:clientid)
             {
                 TF2_RemoveWeaponSlot(client, TFWeaponSlot_Primary);
                 SpawnWeapon(client, "tf_weapon_sniperrifle", 14, 1, 0, "");
+            }
+            case 772, 448: // Block BFB and Soda Popper
+            {
+                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Primary);
+                weapon = SpawnWeapon(client, "tf_weapon_scattergun", 13, 1, 0, "");
             }
             case 237:
             {
@@ -2742,12 +2774,17 @@ public Action:MakeNoHale(Handle:hTimer, any:clientid)
 //              TF2_RemoveWeaponSlot(client, 1);
 //              weapon = SpawnWeapon(client, "tf_weapon_shotgun_soldier", 10, 1, 0, "");
 //          }
-            case 528:
+            case 528:   // ReplacelistSecondary
             {
                 TF2_RemoveWeaponSlot(client, TFWeaponSlot_Secondary);
                 weapon = SpawnWeapon(client, "tf_weapon_laser_pointer", 140, 1, 0, "");
             }
-            case 57, 231:
+            case 46:
+            {
+                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Secondary);
+                weapon = SpawnWeapon(client, "tf_weapon_lunchbox_drink", 163, 1, 0, "144 ; 2");
+            }
+            case 57:
             {
                 TF2_RemoveWeaponSlot(client, TFWeaponSlot_Secondary);
                 weapon = SpawnWeapon(client, "tf_weapon_smg", 16, 1, 0, "");
@@ -2768,9 +2805,9 @@ public Action:MakeNoHale(Handle:hTimer, any:clientid)
 //          }
         }
     }
-    if (IsValidEntity(FindPlayerBack(client, { 57 , 231 }, 2)))
+    if (IsValidEntity(FindPlayerBack(client, { 57 }, 2)))
     {
-        RemovePlayerBack(client, { 57 , 231 }, 2);
+        RemovePlayerBack(client, { 57 }, 2);
         weapon = SpawnWeapon(client, "tf_weapon_smg", 16, 1, 0, "");
     }
     if (IsValidEntity(FindPlayerBack(client, { 642 }, 1)))
@@ -3311,11 +3348,13 @@ public OnClientPutInServer(client)
     SDKHook(client, SDKHook_OnTakeDamage, OnTakeDamage);
     //bSkipNextHale[client] = false;
     Damage[client] = 0;
+    AirDamage[client] = 0;
     uberTarget[client] = -1;
 }
 public OnClientDisconnect(client)
 {
     Damage[client] = 0;
+    AirDamage[client] = 0;
     uberTarget[client] = -1;
     VSHFlags[client] = 0;
     if (Enabled)
@@ -3390,6 +3429,20 @@ public OnClientDisconnect(client)
             }
         }
     }
+}
+
+public OnHookedEvent(Handle:hEvent, const String:strEventName[], bool:bHidden)
+{
+    SetRJFlag(GetClientOfUserId(GetEventInt(hEvent, "userid")), StrEqual(strEventName, "rocket_jump", false));
+}
+
+stock GetRJFlag(client)
+    return (0 < client <= MaxClients && IsClientInGame(client) && IsPlayerAlive(client) ? g_bClientRJFlag[client] : false);
+
+stock SetRJFlag(client, bool:bState)
+{
+    if (0 < client <= MaxClients)
+        g_bClientRJFlag[client] = bState;
 }
 
 public Action:Timer_SetDisconQueuePoints(Handle:timer, Handle:pack)
@@ -3482,12 +3535,16 @@ public Action:ClientTimer(Handle:hTimer)
             {
                 new obstarget = GetEntPropEnt(client, Prop_Send, "m_hObserverTarget");
                 if (IsValidClient(obstarget) && obstarget != Hale && obstarget != client)
-                    ShowSyncHudText(client, rageHUD, "Damage: %d - %N's Damage: %d", Damage[client], obstarget, Damage[obstarget]);
+                {
+                    if (!(GetClientButtons(client) & IN_SCORE)) ShowSyncHudText(client, rageHUD, "Damage: %d - %N's Damage: %d", Damage[client], obstarget, Damage[obstarget]);
+                }
                 else
-                    ShowSyncHudText(client, rageHUD, "Damage: %d", Damage[client]);
+                {
+                    if (!(GetClientButtons(client) & IN_SCORE)) ShowSyncHudText(client, rageHUD, "Damage: %d", Damage[client]);
+                }
                 continue;
             }
-            ShowSyncHudText(client, rageHUD, "Damage: %d", Damage[client]);
+            if (!(GetClientButtons(client) & IN_SCORE)) ShowSyncHudText(client, rageHUD, "Damage: %d", Damage[client]);
             new TFClassType:class = TF2_GetPlayerClass(client);
             new weapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
             if (weapon <= MaxClients || !IsValidEntity(weapon) || !GetEdictClassname(weapon, wepclassname, sizeof(wepclassname))) strcopy(wepclassname, sizeof(wepclassname), "");
@@ -3502,25 +3559,65 @@ public Action:ClientTimer(Handle:hTimer)
                 else TF2_AddCondition(client, TFCond_DeadRingered, 0.3);
             }
 
-//          if (TF2_IsPlayerInCondition(client, TFCond_DefenseBuffed)) TF2_AddCondition(client, TFCond_Ubercharged, 0.3);
-            if (class == TFClass_Medic)
+            // Chdata's Deadringer Notifier
+            if (TF2_GetPlayerClass(client) == TFClass_Spy)
             {
-                if (weapon == GetPlayerWeaponSlot(client, TFWeaponSlot_Primary))
+                if (GetClientCloakIndex(client) == 59)
                 {
-                    new medigun = GetPlayerWeaponSlot(client, TFWeaponSlot_Secondary);
-                    decl String:mediclassname[64];
-                    if (IsValidEdict(medigun) && GetEdictClassname(medigun, mediclassname, sizeof(mediclassname)) && strcmp(mediclassname, "tf_weapon_medigun", false) == 0)
+                    new drstatus = TF2_IsPlayerInCondition(client, TFCond_Cloaked) ? 2 : GetEntProp(client, Prop_Send, "m_bFeignDeathReady") ? 1 : 0;
+
+                    decl String:s[32];
+
+                    switch (drstatus)
                     {
-                        SetHudTextParams(-1.0, 0.83, 0.35, 255, 255, 255, 255, 0, 0.2, 0.0, 0.1);
-                        new charge = RoundToFloor(GetEntPropFloat(medigun, Prop_Send, "m_flChargeLevel") * 100);
-                        ShowSyncHudText(client, jumpHUD, "%T: %i", "vsh_uber-charge", client, charge);
-                        if (charge == 100 && !(VSHFlags[client] & VSHFLAG_UBERREADY))
+                        case 1:
                         {
-                            FakeClientCommandEx(client, "voicemenu 1 7");
-                            VSHFlags[client] |= VSHFLAG_UBERREADY;
+                            SetHudTextParams(-1.0, 0.83, 0.35, 90, 255, 90, 255, 0, 0.0, 0.0, 0.0);
+                            Format(s, sizeof(s), "Status: Feign Death Ready");
+                        }
+                        case 2:
+                        {
+                            SetHudTextParams(-1.0, 0.83, 0.35, 255, 64, 64, 255, 0, 0.0, 0.0, 0.0);
+                            Format(s, sizeof(s), "Status: Deadringed");
+                        }
+                        default:
+                        {
+                            SetHudTextParams(-1.0, 0.83, 0.35, 255, 255, 255, 255, 0, 0.0, 0.0, 0.0);
+                            Format(s, sizeof(s), "Status: Inactive");
                         }
                     }
+
+                    if (!(GetClientButtons(client) & IN_SCORE))
+                    {
+                        ShowSyncHudText(client, jumpHUD, "%s", s);
+                    }
                 }
+            }
+
+            if (class == TFClass_Medic)
+            {
+                new medigun = GetPlayerWeaponSlot(client, TFWeaponSlot_Secondary);
+
+                decl String:mediclassname[64];
+
+                if (IsValidEdict(medigun) && GetEdictClassname(medigun, mediclassname, sizeof(mediclassname)) && strcmp(mediclassname, "tf_weapon_medigun", false) == 0)
+                {
+                    SetHudTextParams(-1.0, 0.83, 0.35, 255, 255, 255, 255, 0, 0.2, 0.0, 0.1);
+
+                    new charge = RoundToFloor(GetEntPropFloat(medigun, Prop_Send, "m_flChargeLevel") * 100);
+
+                    if (!(GetClientButtons(client) & IN_SCORE))
+                    {
+                        ShowSyncHudText(client, jumpHUD, "%T: %i", "vsh_uber-charge", client, charge);
+                    }
+
+                    if (charge == 100 && !(VSHFlags[client] & VSHFLAG_UBERREADY))
+                    {
+                        FakeClientCommandEx(client, "voicemenu 1 7");
+                        VSHFlags[client] |= VSHFLAG_UBERREADY;
+                    }
+                }
+
                 if (weapon == GetPlayerWeaponSlot(client, TFWeaponSlot_Secondary))
                 {
                     new healtarget = GetHealingTarget(client);
@@ -3530,6 +3627,20 @@ public Action:ClientTimer(Handle:hTimer)
                     }
                 }
             }
+
+            if (class == TFClass_Soldier)
+            {
+                if (GetIndexOfWeaponSlot(client, TFWeaponSlot_Primary) == 1104)
+                {
+                    SetHudTextParams(-1.0, 0.83, 0.35, 255, 255, 255, 255, 0, 0.2, 0.0, 0.1);
+
+                    if (!(GetClientButtons(client) & IN_SCORE))
+                    {
+                        ShowSyncHudText(client, jumpHUD, "Air Strike Damage: %i", AirDamage[client]);
+                    }
+                }
+            }
+
 //          else if (AirBlastReload[client]>0)
 //          {
 //              SetHudTextParams(-1.0, 0.83, 0.15, 255, 255, 255, 255, 0, 0.2, 0.0, 0.1);
@@ -3565,12 +3676,20 @@ public Action:ClientTimer(Handle:hTimer)
             if (validwep && weapon == GetPlayerWeaponSlot(client, TFWeaponSlot_Melee))  //&& index != 4 && index != 194 && index != 225 && index != 356 && index != 461 && index != 574) addthecrit = true; //class != TFClass_Spy
             {
                 //slightly longer check but makes sure that any weapon that can backstab will not crit (e.g. Saxxy)
-                if (strcmp(wepclassname, "tf_weapon_knife", false) != 0)
+                if (strcmp(wepclassname, "tf_weapon_knife", false) != 0 && index != 416)
                     addthecrit = true;
             }
             switch (index)
             {
-                case 305, 1079, 1081, 56, 16, 203, 58, 1083, 1105, 1100, 1005, 1092, 812, 833, 997, 39, 351, 740, 588, 595: addthecrit = true; //Critlist
+                case 305, 1079, 1081, 56, 16, 203, 58, 1083, 1105, 1100, 1005, 1092, 812, 833, 997, 39, 351, 740, 588, 595: //Critlist
+                {
+                    new flindex = GetIndexOfWeaponSlot(client, TFWeaponSlot_Primary);
+
+                    if (TF2_GetPlayerClass(client) == TFClass_Pyro && flindex == 594) // No crits if using phlog
+                        addthecrit = false;
+                    else
+                        addthecrit = true;
+                }
                 case 22, 23, 160, 209, 294, 449, 773:
                 {
                     addthecrit = true;
@@ -3663,7 +3782,7 @@ public Action:HaleTimer(Handle:hTimer)
     SetHaleHealthFix(Hale, HaleHealth);
     SetHudTextParams(-1.0, 0.77, 0.35, 255, 255, 255, 255);
     SetGlobalTransTarget(Hale);
-    ShowSyncHudText(Hale, healthHUD, "%t", "vsh_health", HaleHealth, HaleHealthMax);
+    if (!(GetClientButtons(Hale) & IN_SCORE)) ShowSyncHudText(Hale, healthHUD, "%t", "vsh_health", HaleHealth, HaleHealthMax);
     if (HaleRage/RageDMG >= 1)
     {
         if (IsFakeClient(Hale) && !(VSHFlags[Hale] & VSHFLAG_BOTRAGE))
@@ -3671,13 +3790,13 @@ public Action:HaleTimer(Handle:hTimer)
             CreateTimer(1.0, Timer_BotRage, _, TIMER_FLAG_NO_MAPCHANGE);
             VSHFlags[Hale] |= VSHFLAG_BOTRAGE;
         }
-        else
+        else if (!(GetClientButtons(Hale) & IN_SCORE))
         {
             SetHudTextParams(-1.0, 0.83, 0.35, 255, 64, 64, 255);
             ShowSyncHudText(Hale, rageHUD, "%t", "vsh_do_rage");
         }
     }
-    else
+    else if (!(GetClientButtons(Hale) & IN_SCORE))
     {
         SetHudTextParams(-1.0, 0.83, 0.35, 255, 255, 255, 255);
         ShowSyncHudText(Hale, rageHUD, "%t", "vsh_rage_meter", HaleRage*100/RageDMG);
@@ -3695,7 +3814,7 @@ public Action:HaleTimer(Handle:hTimer)
         if (HaleCharge <= 0)
         {
             HaleCharge = 0;
-            ShowSyncHudText(Hale, jumpHUD, "%t", "vsh_super_duper_jump");
+            if (!(GetClientButtons(Hale) & IN_SCORE)) ShowSyncHudText(Hale, jumpHUD, "%t", "vsh_super_duper_jump");
         }
         SetHudTextParams(-1.0, 0.88, 0.35, 255, 64, 64, 255);
     }
@@ -3709,7 +3828,7 @@ public Action:HaleTimer(Handle:hTimer)
                 HaleCharge += 5;
             else
                 HaleCharge = HALEHHH_TELEPORTCHARGE;
-            ShowSyncHudText(Hale, jumpHUD, "%t", "vsh_teleport_status", HaleCharge*2);
+            if (!(GetClientButtons(Hale) & IN_SCORE)) ShowSyncHudText(Hale, jumpHUD, "%t", "vsh_teleport_status", HaleCharge*2);
         }
         else
         {
@@ -3717,16 +3836,17 @@ public Action:HaleTimer(Handle:hTimer)
                 HaleCharge += 5;
             else
                 HaleCharge = HALE_JUMPCHARGE;
-            ShowSyncHudText(Hale, jumpHUD, "%t", "vsh_jump_status", HaleCharge*4);
+            if (!(GetClientButtons(Hale) & IN_SCORE)) ShowSyncHudText(Hale, jumpHUD, "%t", "vsh_jump_status", HaleCharge*4);
         }
     }
     else if (HaleCharge < 0)
     {
         HaleCharge += 5;
         if (Special == VSHSpecial_HHH)
-            ShowSyncHudText(Hale, jumpHUD, "%t %i", "vsh_teleport_status_2", -HaleCharge/20);
-        else
-            ShowSyncHudText(Hale, jumpHUD, "%t %i", "vsh_jump_status_2", -HaleCharge/20);
+        {
+            if (!(GetClientButtons(Hale) & IN_SCORE)) ShowSyncHudText(Hale, jumpHUD, "%t %i", "vsh_teleport_status_2", -HaleCharge/20);
+        }
+        else if (!(GetClientButtons(Hale) & IN_SCORE)) ShowSyncHudText(Hale, jumpHUD, "%t %i", "vsh_jump_status_2", -HaleCharge/20);
     }
     else
     {
@@ -4025,8 +4145,25 @@ public Action:DoTaunt(client, const String:command[], argc)
 }
 public Action:DoSuicide(client, const String:command[], argc)
 {
-    if (Enabled && client == Hale && VSHRoundState == 0)
+    if (Enabled && (VSHRoundState == 0 || VSHRoundState == 1))
+    {
+        if (client == Hale && bTenSecStart)
+        {
+            CPrintToChat(client, "Do not suicide as Hale. Use !hale_resetq instead.");
+            return Plugin_Handled;
+            //KickClient(client, "Next time, please remember to !hale_resetq");
+            //if (VSHRoundState == 0) return Plugin_Handled;
+        }
+    }
+    return Plugin_Continue;
+}
+public Action:DoSuicide2(client, const String:command[], argc)
+{
+    if (Enabled && client == Hale && bTenSecStart)
+    {
+        CPrintToChat(client, "You can't change teams this early.");
         return Plugin_Handled;
+    }
     return Plugin_Continue;
 }
 public Action:UseRage(Handle:hTimer, any:dist)
@@ -4595,6 +4732,7 @@ public Action:event_hurt(Handle:event, const String:name[], bool:dontBroadcast)
     new attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
     new damage = GetEventInt(event, "damageamount");
     new custom = GetEventInt(event, "custom");
+    new weapon = GetEventInt(event, "weaponid");
     if (client != Hale) // || !IsValidEdict(client) || !IsValidEdict(attacker) || (client <= 0) || (attacker <= 0) || (attacker > MaxClients))
         return Plugin_Continue;
 
@@ -4611,6 +4749,16 @@ public Action:event_hurt(Handle:event, const String:name[], bool:dontBroadcast)
     if (custom == TF_CUSTOM_TELEFRAG) SetEventInt(event, "damageamount", damage);
 
     Damage[attacker] += damage;
+
+    if (TF2_GetPlayerClass(attacker) == TFClass_Soldier && GetIndexOfWeaponSlot(attacker, TFWeaponSlot_Primary) == 1104)
+    {
+        if (weapon == TF_WEAPON_ROCKETLAUNCHER)
+        {
+            AirDamage[attacker] += damage;
+        }
+
+        SetEntProp(attacker, Prop_Send, "m_iDecapitations", AirDamage[attacker]/200);
+    }
 
     new healers[MAXPLAYERS];
     new healercount = 0;
@@ -4660,6 +4808,12 @@ public Action:OnTakeDamage(client, &attacker, &inflictor, &Float:damage, &damage
         {
             damage *= 9;
             TF2_AddCondition(client, TFCond_Bonked, 0.1);
+            return Plugin_Changed;
+        }
+        if (TF2_IsPlayerInCondition(client, TFCond_CritMmmph))
+        {
+            damage *= 0.25;
+
             return Plugin_Changed;
         }
         new ent = -1;
@@ -4835,8 +4989,28 @@ public Action:OnTakeDamage(client, &attacker, &inflictor, &Float:damage, &damage
                         if (HaleRage < 0)
                             HaleRage = 0;
                     }
-                    case 132, 266, 482: IncrementHeadCount(attacker);
-                    case 1104: SetEntProp(client, Prop_Send, "m_iDecapitations", Damage[client]/200); // Air Strike
+                    case 132, 266, 482, 1082: IncrementHeadCount(attacker);
+                    case 416:   // Chdata's Market Gardener backstab
+                    {
+                        if (GetRJFlag(attacker))
+                        {
+                            // Can't get stuck in HHH in midair and mg him multiple times.
+                            //if ((GetEntProp(client, Prop_Send, "m_iStunFlags") & TF_STUNFLAGS_GHOSTSCARE | TF_STUNFLAG_NOSOUNDOREFFECT) && Special == VSHSpecial_HHH) return Plugin_Continue;
+
+                            damage = (Pow(float(HaleHealthMax), (0.74074)) + 512.0 - (Marketed/128*float(HaleHealthMax)) )/3.0;    //divide by 3 because this is basedamage and lolcrits (0.714286)) + 1024.0)
+                            damagetype |= DMG_CRIT;
+
+                            if (Marketed < 5) Marketed++;
+
+                            PrintCenterText(attacker, "You market gardened him!");
+                            PrintCenterText(client, "You were just market gardened!");
+
+                            EmitSoundToClient(client, "player/doubledonk.wav", _, _, SNDLEVEL_TRAFFIC, SND_NOFLAGS, 0.6, 100, _, Pos, NULL_VECTOR, false, 0.0);
+                            EmitSoundToClient(attacker, "player/doubledonk.wav", _, _, SNDLEVEL_TRAFFIC, SND_NOFLAGS, 0.6, 100, _, Pos, NULL_VECTOR, false, 0.0);
+
+                            return Plugin_Changed;
+                        }
+                    }
                     case 317: SpawnSmallHealthPackAt(client, GetClientTeam(attacker));
                     case 214:
                     {
@@ -4956,10 +5130,11 @@ public Action:OnTakeDamage(client, &attacker, &inflictor, &Float:damage, &damage
                      Weaker against high HP Hale (but still good).
 
                     */
-                    new Float:changedamage = (float(HaleHealthMax)*0.073687) + 756.089024 - float(HaleHealthMax)*(Stabbed/100);
+                    new Float:changedamage = ( (Pow(float(HaleHealthMax)*0.0014, 2.0) + 899.0) - (float(HaleHealthMax)*(Stabbed/100)) );
                     //new iChangeDamage = RoundFloat(changedamage);
 
                     damage = changedamage/3;            // You can level "damage dealt" with backstabs
+                    damagetype |= DMG_CRIT;
 
                     /*Damage[attacker] += iChangeDamage;
                     if (HaleHealth > iChangeDamage) damage = 0.0;
@@ -5053,7 +5228,7 @@ public Action:OnTakeDamage(client, &attacker, &inflictor, &Float:damage, &damage
                             EmitSoundToAllExcept(SOUNDEXCEPT_VOICE, s, _, SNDCHAN_ITEM, SNDLEVEL_TRAFFIC, SND_NOFLAGS, SNDVOL_NORMAL, 100, Hale, NULL_VECTOR, NULL_VECTOR, false, 0.0);
                         }
                     }
-                    if (Stabbed < 6)
+                    if (Stabbed < 4)
                         Stabbed++;
                     /*new healers[MAXPLAYERS]; // Medic assist unnecessary due to being handled in player_hurt now.
                     new healercount = 0;
@@ -5777,19 +5952,58 @@ stock FindVersionData(Handle:panel, versionindex)
 {
     switch (versionindex)
     {
+        case 57: //1.45
+        {
+            DrawPanelText(panel, "1) Fixed equippable wearables (thanks fiagram & Powerlord).");
+            DrawPanelText(panel, "2) Fixed flickering HUD text.");
+            DrawPanelText(panel, "3) Implemented anti-suicide as Hale measures.");
+            DrawPanelText(panel, "4) Hale cannot suicide until around 30 seconds have passed.");
+            DrawPanelText(panel, "5) Hale can no longer switch teams to suicide.");
+            DrawPanelText(panel, "6) Repositioned 'player became x boss' message off of your crosshair.");
+            DrawPanelText(panel, "--) This version courtesy of the TF2Data community."); // Blatant advertising
+        }
+        case 56: //1.45
+        {
+            DrawPanelText(panel, "7) Removed annoying no yes no no you're Hale next message.");
+            DrawPanelText(panel, "8) Market Gardens do damage similar to backstabs.");
+            DrawPanelText(panel, "9) Deadringer now displays its status.");
+            DrawPanelText(panel, "10) Phlog is invulnerable during taunt activation.");
+            DrawPanelText(panel, "11) Phlog Crit Mmmph duration has 75% damage resistance.");
+            DrawPanelText(panel, "12) Phlog disables flaregun crits.");
+            DrawPanelText(panel, "13) Fixed Bread Bite and Festive Eyelander.");
+            DrawPanelText(panel, "---) This version courtesy of the TF2Data community.");
+        }
+        case 55: //1.45
+        {
+            DrawPanelText(panel, "14) Can now see uber meter with melee or syringe equipped.");
+            DrawPanelText(panel, "15) Soda Popper & BFB replaced with scattergun.");
+            DrawPanelText(panel, "16) Bonk replaced with crit-a-cola.");
+            DrawPanelText(panel, "17) All 3 might be rebalanced in the future.");
+            DrawPanelText(panel, "18) Reserve shooter crits in place of minicrits. Still 3 clip.");
+            DrawPanelText(panel, "---) This version courtesy of the TF2Data community.");
+        }
+        case 54: //1.45
+        {
+            DrawPanelText(panel, "19) Re-enabled Darwin's Danger Shield. Overhealed sniper can tank a hit!");
+            DrawPanelText(panel, "20) Batt's Backup has 75% knockback resist.");
+            DrawPanelText(panel, "21) Air Strike relaxed to 200 dmg per clip.");
+            DrawPanelText(panel, "22) Fixed backstab rarely doing 1/3 damage glitch.");
+            DrawPanelText(panel, "23) Big Earner gives full cloak on backstab.");
+            DrawPanelText(panel, "---) This version courtesy of the TF2Data community.");
+        }
         case 53: //1.44
         {
-            DrawPanelText(panel, "1) Air Strike gains ammo based on every 500 damage dealt.");
+            DrawPanelText(panel, "1) Fixed first round glich (thanks nergal).");
             DrawPanelText(panel, "2) Kunai starts at 65 HP instead of 60. Max 270 HP.");
             DrawPanelText(panel, "3) Kunai gives 180 HP on backstab instead of 100.");
             DrawPanelText(panel, "4) Demo boots now reduce fall damage like soldier boots and do stomp damage.");
             DrawPanelText(panel, "5) Fixed bushwacka disabling crits.");
-            DrawPanelText(panel, "6) Fixed first round glich (thanks nergal).");
-            DrawPanelText(panel, "-) This version courtesy of the TF2Data community.");
+            DrawPanelText(panel, "6) Air Strike gains ammo based on every 500 damage dealt.");
+            DrawPanelText(panel, "--) This version courtesy of the TF2Data community.");
         }
         case 52: //1.44
         {
-            DrawPanelText(panel, "7) Sydney Sleeper now generates contributes half as much to rage than other sniper rifles.");
+            DrawPanelText(panel, "7) Sydney Sleeper generates half the usual rage for Hale.");
             DrawPanelText(panel, "8) Other sniper rifles just do 3x damage as usual.");
             DrawPanelText(panel, "9) Huntsman gets 2x ammo, fortified compound fixed.");
             DrawPanelText(panel, "10) Festive flare gun now acts like mega-detonator.");
@@ -5805,7 +6019,7 @@ stock FindVersionData(Handle:panel, versionindex)
             DrawPanelText(panel, "3) Slightly reworked Hale health formula.");
             DrawPanelText(panel, "4) (Anchor) Bosses take no pushback from damage while ducking on the ground.");
             DrawPanelText(panel, "5) Short circuit blocked until further notice.");
-            DrawPanelText(panel, "-) This version courtesy of the TF2Data community.");
+            DrawPanelText(panel, "--) This version courtesy of the TF2Data community.");
         }
         case 50: //1.43
         {
@@ -5814,7 +6028,7 @@ stock FindVersionData(Handle:panel, versionindex)
             DrawPanelText(panel, "8) Bushwacka doesn't disable crits.");
             DrawPanelText(panel, "9) 2013 festives and bread now get crits.");
             DrawPanelText(panel, "10) Fixed telefrag and mantread stomp damage.");
-            DrawPanelText(panel, "--) This version courtesy of the TF2Data community.");
+            DrawPanelText(panel, "---) This version courtesy of the TF2Data community.");
         }
         case 49: //1.43
         {
@@ -5823,7 +6037,7 @@ stock FindVersionData(Handle:panel, versionindex)
             DrawPanelText(panel, "13) Diamondback gets 3 crits on backstab.");
             DrawPanelText(panel, "14) Diamondback crit shots do bonus damage similar to the Ambassador.");
             DrawPanelText(panel, "15) Manmelter always crits, while revenge crits do bonus damage.");
-            DrawPanelText(panel, "--) This version courtesy of the TF2Data community.");
+            DrawPanelText(panel, "---) This version courtesy of the TF2Data community.");
         }
         case 48: //142
         {
@@ -6646,10 +6860,11 @@ stock CreateVM(client, String:model[])
     TF2_EquipWearable(client, ent);
     return ent;
 }
-stock TF2_EquipWearable(client, entity)
+//Moved to tf2_stocks.inc
+/*stock TF2_EquipWearable(client, entity)
 {
     SDKCall(hEquipWearable, client, entity);
-}
+}*/
 stock AttachProjectileModel(entity, String:strModel[], String:strAnim[] = "")
 {
     if (!IsValidEntity(entity)) return -1;
