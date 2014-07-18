@@ -14,7 +14,7 @@ New plugin thread on AlliedMods: https://forums.alliedmods.net/showthread.php?p=
 #include <sourcemod>
 #include <sdktools>
 #include <sdkhooks>
-#include <tf2_stocks>
+#include <tf2_socks>
 #include <morecolors>
 #include <nextmap>
 #include <tf2items>
