@@ -1,5 +1,5 @@
 /*
-===VS Saxton Hale Mode===
+===Versus Saxton Hale Mode===
 Created by Rainbolt Dash (formerly Dr.Eggman): programmer, model-maker, mapper.
 Notoriously famous for creating plugins with terrible code and then abandoning them
 
@@ -8,6 +8,9 @@ Chdata - A Hale enthusiast with a good understanding of this mod's balance betwe
 nergal - Added some very nice features to the plugin and fixed important bugs.
 
 New plugin thread on AlliedMods: https://forums.alliedmods.net/showthread.php?p=2167912
+
+Fixed unbalanced team joining in the first arena round.
+Fixed maps like military area where BLU can't pick up ammo packs in the first arena round.
 */
 
 #pragma semicolon 1
@@ -15,6 +18,7 @@ New plugin thread on AlliedMods: https://forums.alliedmods.net/showthread.php?p=
 #include <sdktools>
 #include <sdkhooks>
 #include <tf2_socks>
+#include <tf2_stocks>
 #include <morecolors>
 #include <nextmap>
 #include <tf2items>
@@ -28,7 +32,7 @@ New plugin thread on AlliedMods: https://forums.alliedmods.net/showthread.php?p=
 #define EF_BONEMERGE            (1 << 0)
 #define EF_BONEMERGE_FASTCULL   (1 << 7)
 
-#define PLUGIN_VERSION "1.45"
+#define PLUGIN_VERSION "1.46"
 
 #define HALEHHH_TELEPORTCHARGETIME 2
 #define HALE_JUMPCHARGETIME 1
@@ -240,6 +244,8 @@ new Float:UberRageCount;
 new Float:GlowTimer;
 new bool:bEnableSuperDuperJump;
 new bool:bTenSecStart;
+new Handle:hHHHTeleTimer;
+new HHHClimbCount;
 new Handle:cvarVersion;
 new Handle:cvarHaleSpeed;
 new Handle:cvarPointDelay;
@@ -253,6 +259,8 @@ new Handle:cvarPointType;
 new Handle:cvarCrits;
 new Handle:cvarRageSentry;
 new Handle:cvarFirstRound;
+new Handle:cvarDemoShieldCrits;
+new Handle:cvarDisplayHaleHP;
 //new Handle:cvarCircuitStun;
 new Handle:cvarForceSpecToHale;
 new Handle:cvarEnableEurekaEffect;
@@ -269,13 +277,15 @@ new bool:Enabled = false;
 new bool:Enabled2 = false;
 new Float:HaleSpeed = 340.0;
 new PointDelay = 6;
-new RageDMG = 3000;
+new RageDMG = 3500;
 new Float:RageDist = 800.0;
 new Float:Announce = 120.0;
 new bSpecials = true;
 new AliveToEnable = 5;
 new PointType = 0;
 new bool:haleCrits = false;
+new bool:bDemoShieldCrits = false;
+new bool:bAlwaysShowHealth = true;
 new bool:newRageSentry = true;
 //new Float:circuitStun = 0.0;
 new Handle:MusicTimer;
@@ -351,7 +361,11 @@ static const String:haleversiontitles[][] =     //the last line of this is what 
     "1.45",
     "1.45",
     "1.45",
-    "1.45"
+    "1.45",
+    "1.45",
+    "1.46",
+    "1.46",
+    "1.46"
 };
 static const String:haleversiondates[][] =
 {
@@ -409,10 +423,14 @@ static const String:haleversiondates[][] =
     "15 Jul 2014",
     "15 Jul 2014",
     "15 Jul 2014",
+    "18 Jul 2014",
     "17 Jul 2014",
     "17 Jul 2014",
     "17 Jul 2014",
-    "17 Jul 2014"
+    "17 Jul 2014",
+    "27 Jul 2014",
+    "19 Jul 2014",
+    "19 Jul 2014"
 };
 static const maxversion = (sizeof(haleversiontitles) - 1);
 new Handle:OnHaleJump;
@@ -435,8 +453,8 @@ new Handle:OnGetRoundState;*/
 
 //new bool:ACH_Enabled;
 public Plugin:myinfo = {
-    name = "VS Saxton Hale",
-    author = "Rainbolt Dash, FlaminSarge, Chdata, nergal",
+    name = "Versus Saxton Hale",
+    author = "Rainbolt Dash, FlaminSarge, Chdata, nergal, fiagram",
     description = "RUUUUNN!! COWAAAARRDSS!",
     version = PLUGIN_VERSION,
     url = "https://forums.alliedmods.net/showthread.php?p=2167912",
@@ -535,18 +553,20 @@ public OnPluginStart()
     InitGamedata();
 //  RegAdminCmd("hale_eggs", Command_Eggs, ADMFLAG_ROOT);   //WILL CRASH.
     //ACH_Enabled=LibraryExists("hale_achievements");
-    LogMessage("===VS Saxton Hale Initializing - v.%s===", haleversiontitles[maxversion]);
+    LogMessage("===Versus Saxton Hale Initializing - v%s===", haleversiontitles[maxversion]);
     cvarVersion = CreateConVar("hale_version", haleversiontitles[maxversion], "VS Saxton Hale Version", FCVAR_NOTIFY|FCVAR_PLUGIN|FCVAR_SPONLY|FCVAR_DONTRECORD);
     cvarHaleSpeed = CreateConVar("hale_speed", "340.0", "Speed of Saxton Hale", FCVAR_PLUGIN);
     cvarPointType = CreateConVar("hale_point_type", "0", "Select condition to enable point (0 - alive players, 1 - time)", FCVAR_PLUGIN, true, 0.0, true, 1.0);
     cvarPointDelay = CreateConVar("hale_point_delay", "6", "Addition (for each player) delay before point's activation.", FCVAR_PLUGIN);
     cvarAliveToEnable = CreateConVar("hale_point_alive", "5", "Enable control points when there are X people left alive.", FCVAR_PLUGIN);
-    cvarRageDMG = CreateConVar("hale_rage_damage", "3000", "Damage required for Hale to gain rage", FCVAR_PLUGIN, true, 0.0);
+    cvarRageDMG = CreateConVar("hale_rage_damage", "3500", "Damage required for Hale to gain rage", FCVAR_PLUGIN, true, 0.0);
     cvarRageDist  = CreateConVar("hale_rage_dist", "800.0", "Distance to stun in Hale's rage. Vagineer and CBS are /3 (/2 for sentries)", FCVAR_PLUGIN, true, 0.0);
     cvarAnnounce = CreateConVar("hale_announce", "120.0", "Info about mode will show every X seconds. Must be greater than 1.0 to show.", FCVAR_PLUGIN, true, 0.0);
     cvarSpecials = CreateConVar("hale_specials", "1", "Enable Special Rounds (Vagineer, HHH, CBS)", FCVAR_PLUGIN, true, 0.0, true, 1.0);
     cvarEnabled = CreateConVar("hale_enabled", "1", "Do you really want set it to 0?", FCVAR_PLUGIN, true, 0.0, true, 1.0);
     cvarCrits = CreateConVar("hale_crits", "0", "Can Hale get crits?", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+    cvarDemoShieldCrits = CreateConVar("hale_shield_crits", "0", "Does Demoman's shield grant crits (1) or minicrits (0)?", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+    cvarDisplayHaleHP = CreateConVar("hale_hp_display", "1", "Display Hale Health at all times.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
     cvarRageSentry = CreateConVar("hale_ragesentrydamagemode", "1", "If 0, to repair a sentry that has been damaged by rage, the Engineer must pick it up and put it back down.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
     cvarFirstRound = CreateConVar("hale_first_round", "0", "Disable(0) or Enable(1) VSH in 1st round.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
     //cvarCircuitStun = CreateConVar("hale_circuit_stun", "0", "0 to disable Short Circuit stun, >0 to make it stun Hale for x seconds", FCVAR_PLUGIN, true, 0.0);
@@ -576,41 +596,47 @@ public OnPluginStart()
     HookConVarChange(cvarPointDelay, CvarChange);
     HookConVarChange(cvarAliveToEnable, CvarChange);
     HookConVarChange(cvarCrits, CvarChange);
+    HookConVarChange(cvarDemoShieldCrits, CvarChange);
+    HookConVarChange(cvarDisplayHaleHP, CvarChange);
     HookConVarChange(cvarRageSentry, CvarChange);
     //HookConVarChange(cvarCircuitStun, CvarChange);
-    RegConsoleCmd("hale", HalePanel);
-    RegConsoleCmd("hale_hp", Command_GetHPCmd);
-    RegConsoleCmd("halehp", Command_GetHPCmd);
-    RegConsoleCmd("hale_next", QueuePanelCmd);
-    RegConsoleCmd("halenext", QueuePanelCmd);
-    RegConsoleCmd("hale_help", HelpPanelCmd);
-    RegConsoleCmd("halehelp", HelpPanelCmd);
-    RegConsoleCmd("hale_class", HelpPanel2Cmd);
-    RegConsoleCmd("haleclass", HelpPanel2Cmd);
-    RegConsoleCmd("hale_classinfotoggle", ClasshelpinfoCmd);
-    RegConsoleCmd("haleclassinfotoggle", ClasshelpinfoCmd);
-    RegConsoleCmd("hale_new", NewPanelCmd);
-    RegConsoleCmd("halenew", NewPanelCmd);
+    RegConsoleCmd("sm_hale", HalePanel);
+    RegConsoleCmd("sm_hale_hp", Command_GetHPCmd);
+    RegConsoleCmd("sm_halehp", Command_GetHPCmd);
+    RegConsoleCmd("sm_hale_next", QueuePanelCmd);
+    RegConsoleCmd("sm_halenext", QueuePanelCmd);
+    RegConsoleCmd("sm_hale_help", HelpPanelCmd);
+    RegConsoleCmd("sm_halehelp", HelpPanelCmd);
+    RegConsoleCmd("sm_hale_class", HelpPanel2Cmd);
+    RegConsoleCmd("sm_haleclass", HelpPanel2Cmd);
+    RegConsoleCmd("sm_hale_classinfotoggle", ClasshelpinfoCmd);
+    RegConsoleCmd("sm_haleclassinfotoggle", ClasshelpinfoCmd);
+    RegConsoleCmd("sm_infotoggle", ClasshelpinfoCmd);
+    RegConsoleCmd("sm_hale_new", NewPanelCmd);
+    RegConsoleCmd("sm_halenew", NewPanelCmd);
 //  RegConsoleCmd("hale_me", SkipHalePanelCmd);
 //  RegConsoleCmd("haleme", SkipHalePanelCmd);
-    RegConsoleCmd("halemusic", MusicTogglePanelCmd);
-    RegConsoleCmd("hale_music", MusicTogglePanelCmd);
-    RegConsoleCmd("halevoice", VoiceTogglePanelCmd);
-    RegConsoleCmd("hale_voice", VoiceTogglePanelCmd);
-    RegAdminCmd("hale_resetqueuepoints", ResetQueuePointsCmd, 0);
-    RegAdminCmd("hale_resetq", ResetQueuePointsCmd, 0);
+    RegConsoleCmd("sm_halemusic", MusicTogglePanelCmd);
+    RegConsoleCmd("sm_hale_music", MusicTogglePanelCmd);
+    RegConsoleCmd("sm_halevoice", VoiceTogglePanelCmd);
+    RegConsoleCmd("sm_hale_voice", VoiceTogglePanelCmd);
+    RegAdminCmd("sm_hale_resetqueuepoints", ResetQueuePointsCmd, 0);
+    RegAdminCmd("sm_hale_resetq", ResetQueuePointsCmd, 0);
+    RegAdminCmd("sm_halereset", ResetQueuePointsCmd, 0);
+    RegAdminCmd("sm_resetq", ResetQueuePointsCmd, 0);
+    RegAdminCmd("sm_hale_special", Command_MakeNextSpecial, 0, "Call a special to next round.");
     AddCommandListener(DoTaunt, "taunt");
     AddCommandListener(DoTaunt, "+taunt");
     AddCommandListener(DoSuicide, "explode");
     AddCommandListener(DoSuicide, "kill");
     AddCommandListener(DoSuicide2, "jointeam");
     AddCommandListener(Destroy, "destroy");
-    RegAdminCmd("hale_select", Command_HaleSelect, ADMFLAG_CHEATS, "hale_select <target> - Select a player to be next boss");
-    RegAdminCmd("hale_special", Command_MakeNextSpecial, ADMFLAG_CHEATS, "Call a special to next round.");
-    RegAdminCmd("hale_addpoints", Command_Points, ADMFLAG_CHEATS, "hale_addpoints <target> <points> - Add queue points to user.");
-    RegAdminCmd("hale_point_enable", Command_Point_Enable, ADMFLAG_CHEATS, "Enable CP. Only with hale_point_type = 0");
-    RegAdminCmd("hale_point_disable", Command_Point_Disable, ADMFLAG_CHEATS, "Disable CP. Only with hale_point_type = 0");
-    RegAdminCmd("hale_stop_music", Command_StopMusic, ADMFLAG_CHEATS, "Stop any currently playing Boss music.");
+    RegAdminCmd("sm_hale_select", Command_HaleSelect, ADMFLAG_CHEATS, "hale_select <target> - Select a player to be next boss");
+    //RegAdminCmd("sm_hale_special", Command_MakeNextSpecial, ADMFLAG_CHEATS, "Call a special to next round.");
+    RegAdminCmd("sm_hale_addpoints", Command_Points, ADMFLAG_CHEATS, "hale_addpoints <target> <points> - Add queue points to user.");
+    RegAdminCmd("sm_hale_point_enable", Command_Point_Enable, ADMFLAG_CHEATS, "Enable CP. Only with hale_point_type = 0");
+    RegAdminCmd("sm_hale_point_disable", Command_Point_Disable, ADMFLAG_CHEATS, "Disable CP. Only with hale_point_type = 0");
+    RegAdminCmd("sm_hale_stop_music", Command_StopMusic, ADMFLAG_CHEATS, "Stop any currently playing Boss music.");
     AutoExecConfig(true, "SaxtonHale");
     PointCookie = RegClientCookie("hale_queuepoints1", "Amount of VSH Queue points player has", CookieAccess_Protected);
     MusicCookie = RegClientCookie("hale_music_setting", "HaleMusic setting", CookieAccess_Public);
@@ -698,6 +724,8 @@ public OnConfigsExecuted()
     if (PointDelay < 0) PointDelay *= -1;
     AliveToEnable = GetConVarInt(cvarAliveToEnable);
     haleCrits = GetConVarBool(cvarCrits);
+    bDemoShieldCrits = GetConVarBool(cvarDemoShieldCrits);
+    bAlwaysShowHealth = GetConVarBool(cvarDisplayHaleHP);
     newRageSentry = GetConVarBool(cvarRageSentry);
     //circuitStun = GetConVarFloat(cvarCircuitStun);
     if (IsSaxtonHaleMap() && GetConVarBool(cvarEnabled))
@@ -708,7 +736,7 @@ public OnConfigsExecuted()
         mp_forcecamera = GetConVarInt(FindConVar("mp_forcecamera"));
         tf_scout_hype_pep_max = GetConVarFloat(FindConVar("tf_scout_hype_pep_max"));
         SetConVarInt(FindConVar("tf_arena_use_queue"), 0);
-        SetConVarInt(FindConVar("mp_teams_unbalance_limit"), 0);
+        SetConVarInt(FindConVar("mp_teams_unbalance_limit"), GetConVarBool(cvarFirstRound)?0:1);
         SetConVarInt(FindConVar("tf_arena_first_blood"), 0);
         SetConVarInt(FindConVar("mp_forcecamera"), 0);
         SetConVarFloat(FindConVar("tf_scout_hype_pep_max"), 100.0);
@@ -1057,6 +1085,7 @@ public AddToDownload()
     PrecacheSound("vo/halloween_boss/knight_death02.wav", true);
     //PrecacheSound("weapons/barret_arm_zap.wav", true);
     PrecacheSound("player/doubledonk.wav", true);
+    PrecacheSound("misc/halloween/spell_teleport.wav", true);
 #if defined EASTER_BUNNY_ON
     for (i = 0; i < sizeof(BunnyWin); i++)
     {
@@ -1120,6 +1149,10 @@ public CvarChange(Handle:convar, const String:oldValue[], const String:newValue[
         AliveToEnable = GetConVarInt(convar);
     else if (convar == cvarCrits)
         haleCrits = GetConVarBool(convar);
+    else if (convar == cvarDemoShieldCrits)
+        bDemoShieldCrits = GetConVarBool(cvarDemoShieldCrits);
+    else if (convar == cvarDisplayHaleHP)
+        bAlwaysShowHealth = GetConVarBool(cvarDisplayHaleHP);
     else if (convar == cvarRageSentry)
         newRageSentry = GetConVarBool(convar);
     //else if (convar == cvarCircuitStun)
@@ -1397,6 +1430,11 @@ public Action:event_round_start(Handle:event, const String:name[], bool:dontBroa
         KillTimer(MusicTimer);
         MusicTimer = INVALID_HANDLE;
     }
+    if (hHHHTeleTimer != INVALID_HANDLE)
+    {
+        KillTimer(hHHHTeleTimer);
+        hHHHTeleTimer = INVALID_HANDLE;
+    }
     KSpreeCount = 0;
     CheckArena();
     GetCurrentMap(currentmap, sizeof(currentmap));
@@ -1459,16 +1497,23 @@ public Action:event_round_start(Handle:event, const String:name[], bool:dontBroa
         return Plugin_Continue;
     }
     else if (RoundCount > 0)
+    {
         Enabled = true;
+    }
     else if (!GetConVarBool(cvarFirstRound))
     {
         CPrintToChatAll("{olive}[VSH]{default} %t", "vsh_first_round");
         Enabled = false;
         VSHRoundState = -1;
         SetArenaCapEnableTime(60.0);
+        SearchForItemPacks();
+        SetConVarInt(FindConVar("mp_teams_unbalance_limit"), 1);
         CreateTimer(71.0, Timer_EnableCap, _, TIMER_FLAG_NO_MAPCHANGE);
         return Plugin_Continue;
     }
+
+    SetConVarInt(FindConVar("mp_teams_unbalance_limit"), 0);
+
     if (GetTeamPlayerCount(TFTeam_Blue) <= 0 || GetTeamPlayerCount(TFTeam_Red) <= 0)
     {
         if (IsValidClient(Hale))
@@ -1529,8 +1574,8 @@ public Action:event_round_start(Handle:event, const String:name[], bool:dontBroa
     HaleRage = 0;
     Stabbed = 0.0;
     Marketed = 0.0;
+    HHHClimbCount = 0;
     new ent = -1;
-    decl Float:pos[3];
     while ((ent = FindEntityByClassname2(ent, "func_regenerate")) != -1)
         AcceptEntityInput(ent, "Disable");
     ent = -1;
@@ -1551,49 +1596,81 @@ public Action:event_round_start(Handle:event, const String:name[], bool:dontBroa
         AcceptEntityInput(ent, "SetTeam");
         AcceptEntityInput(ent, "skin");
     }
-    new bool:foundAmmo = false, bool:foundHealth = false;
-    ent = -1;
-    while ((ent = FindEntityByClassname2(ent, "item_ammopack_full")) != -1)
-    {
-        GetEntPropVector(ent, Prop_Send, "m_vecOrigin", pos);
-        AcceptEntityInput(ent, "Kill");
-        new ent2 = CreateEntityByName("item_ammopack_small");
-        TeleportEntity(ent2, pos, NULL_VECTOR, NULL_VECTOR);
-        DispatchSpawn(ent2);
-        foundAmmo = true;
-    }
-    ent = -1;
-    while ((ent = FindEntityByClassname2(ent, "item_ammopack_medium")) != -1)
-    {
-        GetEntPropVector(ent, Prop_Send, "m_vecOrigin", pos);
-        AcceptEntityInput(ent, "Kill");
-        new ent2 = CreateEntityByName("item_ammopack_small");
-        TeleportEntity(ent2, pos, NULL_VECTOR, NULL_VECTOR);
-        DispatchSpawn(ent2);
-        foundAmmo = true;
-    }
-    ent = -1;
-    while ((ent = FindEntityByClassname2(ent, "item_healthkit_small")) != -1)
-    {
-        foundHealth = true;
-    }
-    ent = -1;
-    while ((ent = FindEntityByClassname2(ent, "item_healthkit_medium")) != -1)
-    {
-        foundHealth = true;
-    }
-    ent = -1;
-    while ((ent = FindEntityByClassname2(ent, "item_healthkit_large")) != -1)
-    {
-        foundHealth = true;
-    }
-    if (!foundAmmo) SpawnRandomAmmo();
-    if (!foundHealth) SpawnRandomHealth();
+
+    SearchForItemPacks();
+
     CreateTimer(0.2, Timer_GogoHale);
     healthcheckused = 0;
     VSHRoundState = 0;
     return Plugin_Continue;
 }
+
+stock SearchForItemPacks()
+{
+    new bool:foundAmmo = false, bool:foundHealth = false;
+    new ent = -1;
+    decl Float:pos[3];
+    while ((ent = FindEntityByClassname2(ent, "item_ammopack_full")) != -1)
+    {
+        SetEntProp(ent, Prop_Send, "m_iTeamNum", Enabled?OtherTeam:0, 4);
+
+        if (Enabled)
+        {
+            GetEntPropVector(ent, Prop_Send, "m_vecOrigin", pos);
+            AcceptEntityInput(ent, "Kill");
+            new ent2 = CreateEntityByName("item_ammopack_small");
+            TeleportEntity(ent2, pos, NULL_VECTOR, NULL_VECTOR);
+            DispatchSpawn(ent2);
+            SetEntProp(ent2, Prop_Send, "m_iTeamNum", Enabled?OtherTeam:0, 4);
+            foundAmmo = true;
+        }
+        
+    }
+    ent = -1;
+    while ((ent = FindEntityByClassname2(ent, "item_ammopack_medium")) != -1)
+    {
+        SetEntProp(ent, Prop_Send, "m_iTeamNum", Enabled?OtherTeam:0, 4);
+
+        if (Enabled)
+        {
+            GetEntPropVector(ent, Prop_Send, "m_vecOrigin", pos);
+            AcceptEntityInput(ent, "Kill");
+            new ent2 = CreateEntityByName("item_ammopack_small");
+            TeleportEntity(ent2, pos, NULL_VECTOR, NULL_VECTOR);
+            DispatchSpawn(ent2);
+            SetEntProp(ent2, Prop_Send, "m_iTeamNum", Enabled?OtherTeam:0, 4);
+        }
+        
+        foundAmmo = true;
+    }
+    ent = -1;
+    while ((ent = FindEntityByClassname2(ent, "Item_ammopack_small")) != -1)
+    {
+        SetEntProp(ent, Prop_Send, "m_iTeamNum", Enabled?OtherTeam:0, 4);
+        foundAmmo = true;
+    }
+    ent = -1;
+    while ((ent = FindEntityByClassname2(ent, "item_healthkit_small")) != -1)
+    {
+        SetEntProp(ent, Prop_Send, "m_iTeamNum", Enabled?OtherTeam:0, 4);
+        foundHealth = true;
+    }
+    ent = -1;
+    while ((ent = FindEntityByClassname2(ent, "item_healthkit_medium")) != -1)
+    {
+        SetEntProp(ent, Prop_Send, "m_iTeamNum", Enabled?OtherTeam:0, 4);
+        foundHealth = true;
+    }
+    ent = -1;
+    while ((ent = FindEntityByClassname2(ent, "item_healthkit_large")) != -1)
+    {
+        SetEntProp(ent, Prop_Send, "m_iTeamNum", Enabled?OtherTeam:0, 4);
+        foundHealth = true;
+    }
+    if (!foundAmmo) SpawnRandomAmmo();
+    if (!foundHealth) SpawnRandomHealth();
+}
+
 stock SpawnRandomAmmo()
 {
 }
@@ -2225,7 +2302,7 @@ stock SkipHalePanelNotify(client, bool:newchoice = true)
     decl String:s[256];
 
     SetPanelTitle(panel, "[VSH] You're Hale next!");
-    Format(s, sizeof(s), "%t\nAlternatively, use !hale_resetq.", "vsh_to0_near");
+    Format(s, sizeof(s), "%t\nAlternatively, use !resetq.", "vsh_to0_near");
     CRemoveTags(s, sizeof(s));
 
     ReplaceString(s, sizeof(s), "{olive}", "");
@@ -2347,13 +2424,13 @@ EquipSaxton(client)
 {
     bEnableSuperDuperJump = false;
     new SaxtonWeapon;
-    TF2_RemoveAllWeapons(client);
+    TF2_RemoveAllWeapons2(client);
     HaleCharge = 0;
     switch (Special)
     {
         case VSHSpecial_Bunny:
         {
-            SaxtonWeapon = SpawnWeapon(client, "tf_weapon_bottle", 1, 100, 5, "68 ; 2.0 ; 2 ; 3.0 ; 259 ; 1.0 ; 326 ; 1.3");
+            SaxtonWeapon = SpawnWeapon(client, "tf_weapon_bottle", 1, 100, 5, "68 ; 2.0 ; 2 ; 3.0 ; 259 ; 1.0 ; 326 ; 1.3 ; 252 ; 0.6");
             SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", SaxtonWeapon);
         }
         case VSHSpecial_Vagineer:
@@ -2365,7 +2442,7 @@ EquipSaxton(client)
         }
         case VSHSpecial_HHH:
         {
-            SaxtonWeapon = SpawnWeapon(client, "tf_weapon_sword", 266, 100, 5, "68 ; 2.0 ; 2 ; 3.1 ; 259 ; 1.0 ; 252 ; 0.6");
+            SaxtonWeapon = SpawnWeapon(client, "tf_weapon_sword", 266, 100, 5, "68 ; 2.0 ; 2 ; 3.1 ; 259 ; 1.0 ; 252 ; 0.6 ; 551 ; 1");
             SetEntProp(SaxtonWeapon, Prop_Send, "m_iWorldModelIndex", -1);
             SetEntProp(SaxtonWeapon, Prop_Send, "m_nModelIndexOverrides", -1, _, 0);
             SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", SaxtonWeapon);
@@ -2454,7 +2531,10 @@ public Action:MakeHale(Handle:hTimer)
     while ((ent = FindEntityByClassname2(ent, "tf_wearable_demoshield")) != -1)
     {
         if (GetEntPropEnt(ent, Prop_Send, "m_hOwnerEntity") == Hale)
-            AcceptEntityInput(ent, "kill");
+        {
+            TF2_RemoveWearable(Hale, ent);
+            //AcceptEntityInput(ent, "kill");
+        }
     }
     EquipSaxton(Hale);
     HintPanel(Hale);
@@ -2498,7 +2578,18 @@ public Action:TF2Items_OnGiveNamedItem(client, String:classname[], iItemDefiniti
         }
         case 224: //Letranger
         {
-            new Handle:hItemOverride = PrepareItemHandle(hItem, _, _, "166 ; 15 ; 1 ; 0.8 ; 160 ; 1", true);
+            new Handle:hItemOverride = PrepareItemHandle(hItem, _, _, "166 ; 15 ; 1 ; 0.8", true);
+
+            if (hItemOverride != INVALID_HANDLE)
+            {
+                hItem = hItemOverride;
+
+                return Plugin_Changed;
+            }
+        }
+        case 225, 574: // YER
+        {
+            new Handle:hItemOverride = PrepareItemHandle(hItem, _, _, "155 ; 1 ; 160 ; 1", true);
 
             if (hItemOverride != INVALID_HANDLE)
             {
@@ -2520,7 +2611,7 @@ public Action:TF2Items_OnGiveNamedItem(client, String:classname[], iItemDefiniti
         }
         case 356: // Kunai
         {
-            new Handle:hItemOverride = PrepareItemHandle(hItem, _, _, "140 ; 5.0");
+            new Handle:hItemOverride = PrepareItemHandle(hItem, _, _, "125 ; -60");
 
             if (hItemOverride != INVALID_HANDLE)
             {
@@ -2734,22 +2825,22 @@ public Action:MakeNoHale(Handle:hTimer, any:clientid)
         {
             case 41:    // ReplacelistPrimary
             {
-                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Primary);
+                TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Primary);
                 weapon = SpawnWeapon(client, "tf_weapon_minigun", 15, 1, 0, "");
             }
             case 402:
             {
-                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Primary);
+                TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Primary);
                 SpawnWeapon(client, "tf_weapon_sniperrifle", 14, 1, 0, "");
             }
             case 772, 448: // Block BFB and Soda Popper
             {
-                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Primary);
+                TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Primary);
                 weapon = SpawnWeapon(client, "tf_weapon_scattergun", 13, 1, 0, "");
             }
             case 237:
             {
-                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Primary);
+                TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Primary);
                 weapon = SpawnWeapon(client, "tf_weapon_rocketlauncher", 18, 1, 0, "265 ; 99999.0");
                 SetAmmo(client, 0, 20);
             }
@@ -2757,7 +2848,7 @@ public Action:MakeNoHale(Handle:hTimer, any:clientid)
             {
                 if (GetEntProp(weapon, Prop_Send, "m_iEntityQuality") != 10)
                 {
-                    TF2_RemoveWeaponSlot(client, TFWeaponSlot_Primary);
+                    TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Primary);
                     SpawnWeapon(client, "tf_weapon_syringegun_medic", 17, 1, 10, "17 ; 0.05 ; 144 ; 1");
                 }
             }
@@ -2771,27 +2862,27 @@ public Action:MakeNoHale(Handle:hTimer, any:clientid)
         {
 //          case 226:
 //          {
-//              TF2_RemoveWeaponSlot(client, 1);
+//              TF2_RemoveWeaponSlot2(client, 1);
 //              weapon = SpawnWeapon(client, "tf_weapon_shotgun_soldier", 10, 1, 0, "");
 //          }
             case 528:   // ReplacelistSecondary
             {
-                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Secondary);
+                TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Secondary);
                 weapon = SpawnWeapon(client, "tf_weapon_laser_pointer", 140, 1, 0, "");
             }
             case 46:
             {
-                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Secondary);
+                TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Secondary);
                 weapon = SpawnWeapon(client, "tf_weapon_lunchbox_drink", 163, 1, 0, "144 ; 2");
             }
             case 57:
             {
-                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Secondary);
+                TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Secondary);
                 weapon = SpawnWeapon(client, "tf_weapon_smg", 16, 1, 0, "");
             }
             case 265:
             {
-                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Secondary);
+                TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Secondary);
                 weapon = SpawnWeapon(client, "tf_weapon_pipebomblauncher", 20, 1, 0, "");
                 SetAmmo(client, 1, 24);
             }
@@ -2799,15 +2890,15 @@ public Action:MakeNoHale(Handle:hTimer, any:clientid)
 //          {
 //              if (GetEntProp(weapon, Prop_Send, "m_iEntityQuality") != 10)
 //              {
-//                  TF2_RemoveWeaponSlot(client, TFWeaponSlot_Secondary);
+//                  TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Secondary);
 //                  weapon = SpawnWeapon(client, "tf_weapon_flaregun", 39, 5, 10, "25 ; 0.5 ; 207 ; 1.33 ; 144 ; 1.0 ; 58 ; 3.2")
 //              }
 //          }
         }
     }
-    if (IsValidEntity(FindPlayerBack(client, { 57 }, 2)))
+    if (IsValidEntity(FindPlayerBack(client, { 57 }, 1)))
     {
-        RemovePlayerBack(client, { 57 }, 2);
+        RemovePlayerBack(client, { 57 }, 1);
         weapon = SpawnWeapon(client, "tf_weapon_smg", 16, 1, 0, "");
     }
     if (IsValidEntity(FindPlayerBack(client, { 642 }, 1)))
@@ -2822,7 +2913,7 @@ public Action:MakeNoHale(Handle:hTimer, any:clientid)
         {
             case 331:
             {
-                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Melee);
+                TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Melee);
                 weapon = SpawnWeapon(client, "tf_weapon_fists", 195, 1, 6, "");
             }
             case 357:
@@ -2833,7 +2924,7 @@ public Action:MakeNoHale(Handle:hTimer, any:clientid)
             {
                 if (!GetConVarBool(cvarEnableEurekaEffect))
                 {
-                    TF2_RemoveWeaponSlot(client, TFWeaponSlot_Melee);
+                    TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Melee);
                     weapon = SpawnWeapon(client, "tf_weapon_wrench", 7, 1, 0, "");
                 }
             }
@@ -2842,7 +2933,7 @@ public Action:MakeNoHale(Handle:hTimer, any:clientid)
     weapon = GetPlayerWeaponSlot(client, 4);
     if (weapon > MaxClients && IsValidEdict(weapon) && GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 60)
     {
-        TF2_RemoveWeaponSlot(client, 4);
+        TF2_RemoveWeaponSlot2(client, 4);
         weapon = SpawnWeapon(client, "tf_weapon_invis", 30, 1, 0, "");
     }
     if (TF2_GetPlayerClass(client) == TFClass_Medic)
@@ -2851,7 +2942,7 @@ public Action:MakeNoHale(Handle:hTimer, any:clientid)
         new mediquality = (weapon > MaxClients && IsValidEdict(weapon) ? GetEntProp(weapon, Prop_Send, "m_iEntityQuality") : -1);
         if (mediquality != 10)
         {
-            TF2_RemoveWeaponSlot(client, TFWeaponSlot_Secondary);
+            TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Secondary);
             weapon = SpawnWeapon(client, "tf_weapon_medigun", 35, 5, 10, "18 ; 0.0 ; 10 ; 1.25 ; 178 ; 0.75 ; 144 ; 2.0");  //200 ; 1 for area of effect healing    // ; 178 ; 0.75 ; 128 ; 1.0 Faster switch-to
             if (GetIndexOfWeaponSlot(client, TFWeaponSlot_Melee) == 142)
             {
@@ -2887,9 +2978,10 @@ stock RemovePlayerTarge(client)
     while((edict = FindEntityByClassname2(edict, "tf_wearable_demoshield")) != -1)
     {
         new idx = GetEntProp(edict, Prop_Send, "m_iItemDefinitionIndex");
-        if ((idx == 131 || idx == 406) && GetEntPropEnt(edict, Prop_Send, "m_hOwnerEntity") == client && !GetEntProp(edict, Prop_Send, "m_bDisguiseWearable"))
+        if ((idx == 131 || idx == 406 || idx == 1099) && GetEntPropEnt(edict, Prop_Send, "m_hOwnerEntity") == client && !GetEntProp(edict, Prop_Send, "m_bDisguiseWearable"))
         {
-            AcceptEntityInput(edict, "Kill");
+            TF2_RemoveWearable(client, edict);
+            //AcceptEntityInput(edict, "Kill");
         }
     }
 }
@@ -2907,7 +2999,11 @@ stock RemovePlayerBack(client, indices[], len)
             {
                 for (new i = 0; i < len; i++)
                 {
-                    if (idx == indices[i]) AcceptEntityInput(edict, "Kill");
+                    if (idx == indices[i])
+                    {
+                        TF2_RemoveWearable(client, edict);
+                        //AcceptEntityInput(edict, "Kill");
+                    }
                 }
             }
         }
@@ -2923,7 +3019,11 @@ stock RemovePlayerBack(client, indices[], len)
             {
                 for (new i = 0; i < len; i++)
                 {
-                    if (idx == indices[i]) AcceptEntityInput(edict, "Kill");
+                    if (idx == indices[i])
+                    {
+                        TF2_RemoveWearable(client, edict);
+                        //AcceptEntityInput(edict, "Kill");
+                    }
                 }
             }
         }
@@ -3153,6 +3253,12 @@ public Action:Command_GetHP(client)
 }
 public Action:Command_MakeNextSpecial(client, args)
 {
+    if ( !(CheckCommandAccess(client, "sm_hale_special", ADMFLAG_CHEATS, true) || IsClientCreator(client)) )
+    {
+        ReplyToCommand(client, "[SM] You do not have access to this command.");
+        return Plugin_Handled;
+    }
+
     decl String:arg[32];
     decl String:name[64];
     if (!bSpecials)
@@ -3477,7 +3583,7 @@ public Action:event_player_spawn(Handle:event, const String:name[], bool:dontBro
             VSHFlags[client] |= VSHFLAG_HASONGIVED;
             RemovePlayerBack(client, { 57, 133, 231, 405, 444, 608, 642 }, 7);
             RemovePlayerTarge(client);
-            TF2_RemoveAllWeapons(client);
+            TF2_RemoveAllWeapons2(client);
             TF2_RegeneratePlayer(client);
             CreateTimer(0.1, Timer_RegenPlayer, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
         }
@@ -3559,11 +3665,14 @@ public Action:ClientTimer(Handle:hTimer)
                 else TF2_AddCondition(client, TFCond_DeadRingered, 0.3);
             }
 
+            new bool:bHudAdjust = false;
+
             // Chdata's Deadringer Notifier
             if (TF2_GetPlayerClass(client) == TFClass_Spy)
             {
                 if (GetClientCloakIndex(client) == 59)
                 {
+                    bHudAdjust = true;
                     new drstatus = TF2_IsPlayerInCondition(client, TFCond_Cloaked) ? 2 : GetEntProp(client, Prop_Send, "m_bFeignDeathReady") ? 1 : 0;
 
                     decl String:s[32];
@@ -3602,6 +3711,7 @@ public Action:ClientTimer(Handle:hTimer)
 
                 if (IsValidEdict(medigun) && GetEdictClassname(medigun, mediclassname, sizeof(mediclassname)) && strcmp(mediclassname, "tf_weapon_medigun", false) == 0)
                 {
+                    bHudAdjust = true;
                     SetHudTextParams(-1.0, 0.83, 0.35, 255, 255, 255, 255, 0, 0.2, 0.0, 0.1);
 
                     new charge = RoundToFloor(GetEntPropFloat(medigun, Prop_Send, "m_flChargeLevel") * 100);
@@ -3632,6 +3742,7 @@ public Action:ClientTimer(Handle:hTimer)
             {
                 if (GetIndexOfWeaponSlot(client, TFWeaponSlot_Primary) == 1104)
                 {
+                    bHudAdjust = true;
                     SetHudTextParams(-1.0, 0.83, 0.35, 255, 255, 255, 255, 0, 0.2, 0.0, 0.1);
 
                     if (!(GetClientButtons(client) & IN_SCORE))
@@ -3641,6 +3752,12 @@ public Action:ClientTimer(Handle:hTimer)
                 }
             }
 
+            if (bAlwaysShowHealth)
+            {
+                SetHudTextParams(-1.0, bHudAdjust?0.78:0.83, 0.35, 255, 255, 255, 255);
+                if (!(GetClientButtons(client) & IN_SCORE)) ShowSyncHudText(client, healthHUD, "%t", "vsh_health", HaleHealth, HaleHealthMax);
+            }
+            
 //          else if (AirBlastReload[client]>0)
 //          {
 //              SetHudTextParams(-1.0, 0.83, 0.15, 255, 255, 255, 255, 0, 0.2, 0.0, 0.1);
@@ -3705,7 +3822,16 @@ public Action:ClientTimer(Handle:hTimer)
             {
                 addthecrit = false;
             }
-            if (class == TFClass_DemoMan && !IsValidEntity(GetPlayerWeaponSlot(client, TFWeaponSlot_Secondary))) addthecrit = true;
+            if (class == TFClass_DemoMan && !IsValidEntity(GetPlayerWeaponSlot(client, TFWeaponSlot_Secondary)))
+            {
+                addthecrit = true;
+
+                if (!bDemoShieldCrits && GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon") != GetPlayerWeaponSlot(client, TFWeaponSlot_Melee))
+                {
+                    cond = TFCond_Buffed;
+                }
+            }
+
 /*          if (Special != VSHSpecial_HHH && index != 56 && index != 1005 && weapon == GetPlayerWeaponSlot(client, TFWeaponSlot_Primary))
             {
                 new meleeindex = GetIndexOfWeaponSlot(client, TFWeaponSlot_Melee);
@@ -3820,7 +3946,7 @@ public Action:HaleTimer(Handle:hTimer)
     }
 
     new buttons = GetClientButtons(Hale);
-    if (((buttons & IN_DUCK) || (buttons & IN_ATTACK2)) && (HaleCharge >= 0) && !(buttons & IN_JUMP))
+    if (((buttons & IN_DUCK) || (buttons & IN_ATTACK2)) && (HaleCharge >= 0)) // && !(buttons & IN_JUMP)
     {
         if (Special == VSHSpecial_HHH)
         {
@@ -3873,6 +3999,13 @@ public Action:HaleTimer(Handle:hTimer)
                 while ((RedAlivePlayers > 0) && (!IsValidClient(target, false) || (target == Hale) || !IsPlayerAlive(target) || GetClientTeam(target) != OtherTeam));
                 if (IsValidClient(target))
                 {
+                    // Chdata's HHH teleport rework
+                    if (TF2_GetPlayerClass(target) != TFClass_Scout && TF2_GetPlayerClass(target) != TFClass_Soldier)
+                    {
+                        SetEntProp(Hale, Prop_Send, "m_CollisionGroup", 2); //Makes HHH clipping go away for player and some projectiles
+                        hHHHTeleTimer = CreateTimer(bEnableSuperDuperJump ? 4.0:2.0, HHHTeleTimer, TIMER_FLAG_NO_MAPCHANGE);
+                    }
+
                     GetClientAbsOrigin(target, pos);
                     SetEntPropFloat(Hale, Prop_Send, "m_flNextAttack", GetGameTime() + (bEnableSuperDuperJump ? 4.0 : 2.0));
                     if (GetEntProp(target, Prop_Send, "m_bDucked"))
@@ -3896,6 +4029,16 @@ public Action:HaleTimer(Handle:hTimer)
                     GlowTimer = 0.0;
                     CreateTimer(3.0, RemoveEnt, EntIndexToEntRef(AttachParticle(Hale, "ghost_appearation")));
                     CreateTimer(3.0, RemoveEnt, EntIndexToEntRef(AttachParticle(Hale, "ghost_appearation", _, false)));
+
+                    // Chdata's HHH teleport rework
+                    decl Float:vPos[3];
+                    GetEntPropVector(target, Prop_Send, "m_vecOrigin", vPos);
+
+                    EmitSoundToClient(Hale, "misc/halloween/spell_teleport.wav", _, _, SNDLEVEL_GUNFIRE, SND_NOFLAGS, SNDVOL_NORMAL, 100, _, vPos, NULL_VECTOR, false, 0.0);
+                    EmitSoundToClient(target, "misc/halloween/spell_teleport.wav", _, _, SNDLEVEL_GUNFIRE, SND_NOFLAGS, SNDVOL_NORMAL, 100, _, vPos, NULL_VECTOR, false, 0.0);
+
+                    PrintCenterText(target, "You've been teleported to!");
+
                     HaleCharge=-1100;
                 }
                 if (bEnableSuperDuperJump)
@@ -3972,8 +4115,16 @@ public Action:HaleTimer(Handle:hTimer)
             HaleRage = RageDMG;
     }
 
-    if (!(GetEntityFlags(Hale) & FL_ONGROUND)) WeighDownTimer += 0.2;
-    else WeighDownTimer = 0.0;
+    if (!(GetEntityFlags(Hale) & FL_ONGROUND))
+    {
+        WeighDownTimer += 0.2;
+    }
+    else
+    {
+        HHHClimbCount = 0;
+        WeighDownTimer = 0.0;
+    }
+
     if (WeighDownTimer >= 4.0 && buttons & IN_DUCK && GetEntityGravity(Hale) != 6.0)
     {
         decl Float:ang[3];
@@ -3997,6 +4148,13 @@ public Action:HaleTimer(Handle:hTimer)
     }
     return Plugin_Continue;
 }
+
+public Action:HHHTeleTimer(Handle:timer)
+{
+    SetEntProp(Hale, Prop_Send, "m_CollisionGroup", 5); //Fix HHH's clipping.
+    hHHHTeleTimer = INVALID_HANDLE;
+}
+
 public Action:Timer_StunHHH(Handle:timer, Handle:pack)
 {
     if (!IsValidClient(Hale, false)) return;
@@ -4098,8 +4256,8 @@ public Action:DoTaunt(client, const String:command[], argc)
             {
                 strcopy(s, PLATFORM_MAX_PATH, BunnyRage[GetRandomInt(1, sizeof(BunnyRage)-1)]);
                 EmitSoundToAll(s, _, _, SNDLEVEL_TRAFFIC, SND_NOFLAGS, SNDVOL_NORMAL, 100, _, pos, NULL_VECTOR, false, 0.0);
-                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Primary);
-                new weapon = SpawnWeapon(client, "tf_weapon_grenadelauncher", 19, 100, 5, "6 ; 0.1 ; 411 ; 150.0 ; 413 ; 1.0 ; 37 ; 0.0 ; 280 ; 17 ; 477 ; 1.0 ; 467 ; 1.0 ; 181 ; 2.0");
+                TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Primary);
+                new weapon = SpawnWeapon(client, "tf_weapon_grenadelauncher", 19, 100, 5, "1 ; 0.6 ; 6 ; 0.1 ; 411 ; 150.0 ; 413 ; 1.0 ; 37 ; 0.0 ; 280 ; 17 ; 477 ; 1.0 ; 467 ; 1.0 ; 181 ; 2.0 ; 252 ; 0.7");
                 SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", weapon);
                 SetEntProp(weapon, Prop_Send, "m_iClip1", 50);
 //              new vm = CreateVM(client, ReloadEggModel);
@@ -4116,8 +4274,8 @@ public Action:DoTaunt(client, const String:command[], argc)
                 else
                     Format(s, PLATFORM_MAX_PATH, "%s", CBS3);
                 EmitSoundToAll(s, _, _, SNDLEVEL_TRAFFIC, SND_NOFLAGS, SNDVOL_NORMAL, 100, _, pos, NULL_VECTOR, false, 0.0);
-                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Primary);
-                SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", SpawnWeapon(client, "tf_weapon_compound_bow", 1005, 100, 5, "2 ; 2.1 ; 6 ; 0.5 ; 37 ; 0.0 ; 280 ; 19"));
+                TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Primary);
+                SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", SpawnWeapon(client, "tf_weapon_compound_bow", 1005, 100, 5, "2 ; 2.1 ; 6 ; 0.5 ; 37 ; 0.0 ; 280 ; 19 ; 551 ; 1"));
                 SetAmmo(client, TFWeaponSlot_Primary, ((RedAlivePlayers >= CBS_MAX_ARROWS) ? CBS_MAX_ARROWS : RedAlivePlayers));
                 CreateTimer(0.6, UseRage, dist);
                 CreateTimer(0.1, UseBowRage);
@@ -4149,7 +4307,7 @@ public Action:DoSuicide(client, const String:command[], argc)
     {
         if (client == Hale && bTenSecStart)
         {
-            CPrintToChat(client, "Do not suicide as Hale. Use !hale_resetq instead.");
+            CPrintToChat(client, "Do not suicide as Hale. Use !resetq instead.");
             return Plugin_Handled;
             //KickClient(client, "Next time, please remember to !hale_resetq");
             //if (VSHRoundState == 0) return Plugin_Handled;
@@ -4438,7 +4596,7 @@ public Action:event_player_death(Handle:event, const String:name[], bool:dontBro
                 new weapon = GetEntPropEnt(Hale, Prop_Send, "m_hActiveWeapon");
                 if (weapon == GetPlayerWeaponSlot(Hale, TFWeaponSlot_Melee))
                 {
-                    TF2_RemoveWeaponSlot(Hale, TFWeaponSlot_Melee);
+                    TF2_RemoveWeaponSlot2(Hale, TFWeaponSlot_Melee);
                     new clubindex, wepswitch = GetRandomInt(0, 3);
                     switch (wepswitch)
                     {
@@ -4775,9 +4933,9 @@ public Action:event_hurt(Handle:event, const String:name[], bool:dontBroadcast)
         if (IsValidClient(healers[i]) && IsPlayerAlive(healers[i]))
         {
             if (damage < 10 || uberTarget[healers[i]] == attacker)
-                Damage[healers[i]] += RoundFloat(float(damage)*(custom == TF_CUSTOM_BACKSTAB ? 3/5:1));
+                Damage[healers[i]] += damage;
             else
-                Damage[healers[i]] += RoundFloat(float(damage)*(custom == TF_CUSTOM_BACKSTAB ? 3/5:1)/(healercount+1));
+                Damage[healers[i]] += damage/(healercount+1);
         }
     }
 
@@ -4821,7 +4979,8 @@ public Action:OnTakeDamage(client, &attacker, &inflictor, &Float:damage, &damage
         {
             if (GetEntPropEnt(ent, Prop_Send, "m_hOwnerEntity") == client && !GetEntProp(ent, Prop_Send, "m_bDisguiseWearable"))
             {
-                AcceptEntityInput(ent, "Kill");
+                //AcceptEntityInput(ent, "Kill");
+                TF2_RemoveWearable(client, ent);
                 EmitSoundToClient(client, "player/spy_shield_break.wav", _, _, SNDLEVEL_TRAFFIC, SND_NOFLAGS, 0.7, 100, _, Pos, NULL_VECTOR, false, 0.0);
                 EmitSoundToClient(client, "player/spy_shield_break.wav", _, _, SNDLEVEL_TRAFFIC, SND_NOFLAGS, 0.7, 100, _, Pos, NULL_VECTOR, false, 0.0);
                 EmitSoundToClient(attacker, "player/spy_shield_break.wav", _, _, SNDLEVEL_TRAFFIC, SND_NOFLAGS, 0.7, 100, _, Pos, NULL_VECTOR, false, 0.0);
@@ -4937,7 +5096,7 @@ public Action:OnTakeDamage(client, &attacker, &inflictor, &Float:damage, &damage
                             }
                         }
                     }
-                    case 14, 201, 230, 402, 526, 664, 752, 792, 801, 851, 881, 890, 899, 908, 957, 966:
+                    case 14, 201, 230, 402, 526, 664, 752, 792, 801, 851, 881, 890, 899, 908, 957, 966, 1098:
                     {
                         switch (wepindex)   //cleaner to read than if wepindex == || wepindex == || etc
                         {
@@ -5024,6 +5183,14 @@ public Action:OnTakeDamage(client, &attacker, &inflictor, &Float:damage, &damage
                             SetEntProp(attacker, Prop_Send, "m_iHealth", newhealth);
                         }
                         if (TF2_IsPlayerInCondition(attacker, TFCond_OnFire)) TF2_RemoveCondition(attacker, TFCond_OnFire);
+                    }
+                    case 594: // Phlog
+                    {
+                        if (!TF2_IsPlayerInCondition(attacker, TFCond_CritMmmph))
+                        {
+                            damage /= 2.0;
+                            return Plugin_Changed;
+                        }
                     }
                     case 357:
                     {
@@ -5184,10 +5351,11 @@ public Action:OnTakeDamage(client, &attacker, &inflictor, &Float:damage, &damage
                         SetEntProp(attacker, Prop_Send, "m_iRevengeCrits", iCrits+2);
                     }
 
-                    if (wepindex == 225 || wepindex == 574)
+                    /*if (wepindex == 225 || wepindex == 574)
                     {
                         CreateTimer(0.3, Timer_DisguiseBackstab, GetClientUserId(attacker));
-                    }
+                    }*/
+
                     if (wepindex == 356)
                     {
                         new health = GetClientHealth(attacker) + 180;
@@ -5405,7 +5573,7 @@ stock TF2_IsPlayerCritBuffed(client)
             || TF2_IsPlayerInCondition(client, TFCond_CritMmmph)
             );
 }
-public Action:Timer_DisguiseBackstab(Handle:timer, any:userid)
+/*public Action:Timer_DisguiseBackstab(Handle:timer, any:userid)
 {
     new client = GetClientOfUserId(userid);
     if (IsValidClient(client, false))
@@ -5449,19 +5617,25 @@ stock RandomlyDisguise(client)  //original code was mecha's, but the original co
             SetEntProp(client, Prop_Send, "m_iDisguiseTargetIndex", disguisetarget);
             SetEntProp(client, Prop_Send, "m_iDisguiseHealth", 200);
         }
-/*      SetEntProp(client, Prop_Send, "m_nDisguiseClass", disguiseclass);
-        SetEntProp(client, Prop_Send, "m_nDisguiseTeam", team);
-        SetEntProp(client, Prop_Send, "m_iDisguiseTargetIndex", disguisetarget);
-        SetEntProp(client, Prop_Send, "m_iDisguiseHealth", disguisehealth);
-        TF2_DisguisePlayer(client, TFTeam:team, TFClassType:disguiseclass);
-        FakeClientCommandEx(client, "lastdisguise");
-        TF2_AddCondition(client, TFCond_Disguised, 99999.0);*/
     }
-}
+}*/
 public Action:TF2_CalcIsAttackCritical(client, weapon, String:weaponname[], &bool:result)
 {
-    if (!Enabled) return Plugin_Continue;
-    if (!IsValidClient(client, false)) return Plugin_Continue;
+    if (!IsValidClient(client, false) || !Enabled) return Plugin_Continue;
+
+    // HHH can climb walls
+    if (IsValidEntity(weapon) && Special == VSHSpecial_HHH && client == Hale && HHHClimbCount <= 9 && VSHRoundState > 0)
+    {
+        new index = GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex");
+
+        if (index == 266 && StrEqual(weaponname, "tf_weapon_sword", false))
+        {
+            SickleClimbWalls(client, weapon);
+            WeighDownTimer = 0.0;
+            HHHClimbCount++;
+        }
+    }
+
     if (client == Hale)
     {
         if (VSHRoundState != 1) return Plugin_Continue;
@@ -5472,13 +5646,12 @@ public Action:TF2_CalcIsAttackCritical(client, weapon, String:weaponname[], &boo
             return Plugin_Changed;
         }
     }
-    else if (IsValidEntity(weapon) && Special != VSHSpecial_HHH)
+    else if (IsValidEntity(weapon))
     {
         new index = GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex");
         if (index == 232 && StrEqual(weaponname, "tf_weapon_club", false))
         {
-            SickleClimbWalls(client);
-            CreateTimer(0.0, Timer_NoAttacking, EntIndexToEntRef(weapon), TIMER_FLAG_NO_MAPCHANGE);
+            SickleClimbWalls(client, weapon);
         }
     }
     return Plugin_Continue;
@@ -5496,7 +5669,7 @@ stock SetNextAttack(weapon, Float:duration = 0.0)
     SetEntPropFloat(weapon, Prop_Send, "m_flNextPrimaryAttack", next);
     SetEntPropFloat(weapon, Prop_Send, "m_flNextSecondaryAttack", next);
 }
-public SickleClimbWalls(client)     //Credit to Mecha the Slag
+public SickleClimbWalls(client, weapon)     //Credit to Mecha the Slag
 {
     if (!IsValidClient(client) || (GetClientHealth(client)<=15) )return;
 
@@ -5530,10 +5703,16 @@ public SickleClimbWalls(client)     //Credit to Mecha the Slag
 
     new Float:fVelocity[3];
     GetEntPropVector(client, Prop_Data, "m_vecVelocity", fVelocity);
+
     fVelocity[2] = 600.0;
+
     TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, fVelocity);
+
     SDKHooks_TakeDamage(client, client, client, 15.0, DMG_CLUB, GetPlayerWeaponSlot(client, TFWeaponSlot_Melee));
-    ClientCommand(client, "playgamesound \"%s\"", "player\\taunt_clip_spin.wav");
+
+    if (client != Hale) ClientCommand(client, "playgamesound \"%s\"", "player\\taunt_clip_spin.wav");
+
+    CreateTimer(0.0, Timer_NoAttacking, EntIndexToEntRef(weapon), TIMER_FLAG_NO_MAPCHANGE);
 }
 public bool:TraceRayDontHitSelf(entity, mask, any:data)
 {
@@ -5932,18 +6111,46 @@ public Action:NewPanel(client, versionindex)
     Format(s, 90, "=%t%s:=", "vsh_whatsnew", haleversiontitles[versionindex]);
     SetPanelTitle(panel, s);
     FindVersionData(panel, versionindex);
+
     if (versionindex > 0)
-        Format(s, 90, "%t", "vsh_older");
+    {
+        if (strcmp(haleversiontitles[versionindex], haleversiontitles[versionindex-1], false) == 0)
+        {
+            Format(s, 90, "Next Page");
+        }
+        else
+        {
+            Format(s, 90, "Older v%s", haleversiontitles[versionindex-1]); 
+        }
+        DrawPanelItem(panel, s);
+    }
     else
+    {
         Format(s, 90, "%t", "vsh_noolder");
-    DrawPanelItem(panel, s);
+        DrawPanelItem(panel, s, ITEMDRAW_DISABLED);
+    }
+
     if (versionindex < maxversion)
-        Format(s, 90, "%t", "vsh_newer");
+    {
+        if (strcmp(haleversiontitles[versionindex], haleversiontitles[versionindex+1], false) == 0)
+        {
+            Format(s, 90, "Prev Page");
+        }
+        else
+        {
+            Format(s, 90, "Newer v%s", haleversiontitles[versionindex+1]);
+        }
+        DrawPanelItem(panel, s);
+    }
     else
+    {
         Format(s, 90, "%t", "vsh_nonewer");
-    DrawPanelItem(panel, s);
+        DrawPanelItem(panel, s, ITEMDRAW_DISABLED);
+    }
+    
     Format(s, 512, "%t", "vsh_menu_exit");
     DrawPanelItem(panel, s);
+
     SendPanelToClient(panel, client, NewPanelH, 9001);
     CloseHandle(panel);
     return Plugin_Continue;
@@ -5952,7 +6159,34 @@ stock FindVersionData(Handle:panel, versionindex)
 {
     switch (versionindex)
     {
-        case 57: //1.45
+        case 61: //1.46
+        {
+            DrawPanelText(panel, "1) Fixed botkillers (thanks rswallen).");
+            DrawPanelText(panel, "2) Fixed Tide Turner & Razorback not being unequipped/removed properly.");
+            DrawPanelText(panel, "3) Hale can no longer pick up health packs.");
+            DrawPanelText(panel, "4) Fixed maps like military area where BLU can't pick up ammo packs in the first arena round.");
+            DrawPanelText(panel, "5) Fixed unbalanced team joining in the first arena round.");
+            DrawPanelText(panel, "--) This version courtesy of the TF2Data community.");
+        }
+        case 60: //1.46
+        {
+            DrawPanelText(panel, "6) Can now type !resetq to reset your queue points.");
+            DrawPanelText(panel, "7) !infotoggle can disable the !haleclass info popups on round start.");
+            DrawPanelText(panel, "8) Easter Bunny has 40pct knockback resist in light of the crit eggs.");
+            DrawPanelText(panel, "9) Phlog damage reduced by half when not under the effects of CritMmmph.");
+            DrawPanelText(panel, "10) Quiet decloak moved from Letranger to Your Eternal Reward / Wanga Prick.");
+            DrawPanelText(panel, "---) This version courtesy of the TF2Data community.");
+        }
+        case 59: //1.46
+        {
+            DrawPanelText(panel, "11) YER no longer disguises you.");
+            DrawPanelText(panel, "12) Changed /halenew pagination a little.");
+            DrawPanelText(panel, "13) Nerfed demo shield crits to minicrits. He was overpowered compared to other classes.");
+            DrawPanelText(panel, "14) Added Cvar 'hale_shield_crits' to re-enable shield crits for servers balanced around taunt crits/goomba.");
+            DrawPanelText(panel, "15) Added cvar 'hale_hp_display' to toggle displaying Hale's Health at all times on the hud.");
+            DrawPanelText(panel, "---) This version courtesy of the TF2Data community.");
+        }
+        case 58: //1.45
         {
             DrawPanelText(panel, "1) Fixed equippable wearables (thanks fiagram & Powerlord).");
             DrawPanelText(panel, "2) Fixed flickering HUD text.");
@@ -5962,7 +6196,7 @@ stock FindVersionData(Handle:panel, versionindex)
             DrawPanelText(panel, "6) Repositioned 'player became x boss' message off of your crosshair.");
             DrawPanelText(panel, "--) This version courtesy of the TF2Data community."); // Blatant advertising
         }
-        case 56: //1.45
+        case 57: //1.45
         {
             DrawPanelText(panel, "7) Removed annoying no yes no no you're Hale next message.");
             DrawPanelText(panel, "8) Market Gardens do damage similar to backstabs.");
@@ -5973,22 +6207,34 @@ stock FindVersionData(Handle:panel, versionindex)
             DrawPanelText(panel, "13) Fixed Bread Bite and Festive Eyelander.");
             DrawPanelText(panel, "---) This version courtesy of the TF2Data community.");
         }
-        case 55: //1.45
+        case 56: //1.45
         {
             DrawPanelText(panel, "14) Can now see uber meter with melee or syringe equipped.");
             DrawPanelText(panel, "15) Soda Popper & BFB replaced with scattergun.");
             DrawPanelText(panel, "16) Bonk replaced with crit-a-cola.");
             DrawPanelText(panel, "17) All 3 might be rebalanced in the future.");
             DrawPanelText(panel, "18) Reserve shooter crits in place of minicrits. Still 3 clip.");
+            DrawPanelText(panel, "19) Re-enabled Darwin's Danger Shield. Overhealed sniper can tank a hit!");
             DrawPanelText(panel, "---) This version courtesy of the TF2Data community.");
         }
-        case 54: //1.45
+        case 55: //1.45
         {
-            DrawPanelText(panel, "19) Re-enabled Darwin's Danger Shield. Overhealed sniper can tank a hit!");
             DrawPanelText(panel, "20) Batt's Backup has 75% knockback resist.");
             DrawPanelText(panel, "21) Air Strike relaxed to 200 dmg per clip.");
             DrawPanelText(panel, "22) Fixed backstab rarely doing 1/3 damage glitch.");
             DrawPanelText(panel, "23) Big Earner gives full cloak on backstab.");
+            DrawPanelText(panel, "24) Fixed SteamTools not changing gamedesc.");
+            DrawPanelText(panel, "25) Reverted 3/5ths backstab assist for medics and fixed no assist glitch.");
+            DrawPanelText(panel, "---) This version courtesy of the TF2Data community.");
+        }
+        case 54: //1.45
+        {
+            DrawPanelText(panel, "26) HHH can wallclimb.");
+            DrawPanelText(panel, "27) HHH's weighdown timer is reset on wallclimb.");
+            DrawPanelText(panel, "28) HHH now alerts their teleport target that he teleported to them.");
+            DrawPanelText(panel, "29) HHH can get stuck in soldiers and scouts, but not other classes on teleport.");
+            DrawPanelText(panel, "30) Can now charge super jump while holding space.");
+            DrawPanelText(panel, "31) Nerfed Easter Bunny's rage eggs by 40% damage.");
             DrawPanelText(panel, "---) This version courtesy of the TF2Data community.");
         }
         case 53: //1.44
@@ -6913,6 +7159,24 @@ stock SetHaleHealthFix(client, oldhealth)
 
 //  SetEntProp(Hale, Prop_Data, "m_iHealth", HaleHealth);
     SetEntProp(client, Prop_Send, "m_iHealth", originalhealth);
+}
+#define MAX_STEAMAUTH_LENGTH 21
+#define STEAMID_CHDATA "STEAM_0:1:41644167"
+#define STEAMID_FSARGE "STEAM_0:1:19100391"
+
+stock bool:IsClientCreator(client)
+{
+    if (!IsClientAuthorized(client)) return false;
+
+    new String:clientAuth[MAX_STEAMAUTH_LENGTH];
+    GetClientAuthString(client, clientAuth, sizeof(clientAuth));
+
+    if (StrEqual(STEAMID_CHDATA, clientAuth) || StrEqual(STEAMID_FSARGE, clientAuth))
+    {
+        return true;
+    }
+
+    return false;
 }
 public Native_IsVSHMap(Handle:plugin, numParams)
 {
