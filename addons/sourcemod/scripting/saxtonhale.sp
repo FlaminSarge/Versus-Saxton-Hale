@@ -4,35 +4,35 @@ Created by Rainbolt Dash (formerly Dr.Eggman): programmer, model-maker, mapper.
 Notoriously famous for creating plugins with terrible code and then abandoning them
 
 FlaminSarge - He makes cool things. He improves on terrible things until they're good.
-Chdata - A Hale enthusiast with a good understanding of this mod's balance between all classes, and a coder.
+Chdata - A Hale enthusiast and a coder. An Integrated Data Sentient Entity.
 nergal - Added some very nice features to the plugin and fixed important bugs.
 
 New plugin thread on AlliedMods: https://forums.alliedmods.net/showthread.php?p=2167912
-
-Fixed unbalanced team joining in the first arena round.
-Fixed maps like military area where BLU can't pick up ammo packs in the first arena round.
 */
 
 #pragma semicolon 1
 #include <sourcemod>
-#include <sdktools>
 #include <sdkhooks>
-#include <tf2_socks>
 #include <tf2_stocks>
 #include <morecolors>
 #include <nextmap>
 #include <tf2items>
 #include <clientprefs>
+
 #undef REQUIRE_EXTENSIONS
 #tryinclude <steamtools>
 #define REQUIRE_EXTENSIONS
+
+#undef REQUIRE_PLUGIN
+#tryinclude <tf2attributes>
+#define REQUIRE_PLUGIN
 
 #define ME 2048
 
 #define EF_BONEMERGE            (1 << 0)
 #define EF_BONEMERGE_FASTCULL   (1 << 7)
 
-#define PLUGIN_VERSION "1.46"
+#define PLUGIN_VERSION "1.47"
 
 #define HALEHHH_TELEPORTCHARGETIME 2
 #define HALE_JUMPCHARGETIME 1
@@ -293,6 +293,7 @@ new TeamRoundCounter;
 new botqueuepoints = 0;
 new String:currentmap[99];
 new bool:checkdoors = false;
+new bool:PointReady;
 new tf_arena_use_queue;
 new mp_teams_unbalance_limit;
 new tf_arena_first_blood;
@@ -365,7 +366,8 @@ static const String:haleversiontitles[][] =     //the last line of this is what 
     "1.45",
     "1.46",
     "1.46",
-    "1.46"
+    "1.46",
+    "1.47"
 };
 static const String:haleversiondates[][] =
 {
@@ -430,7 +432,8 @@ static const String:haleversiondates[][] =
     "17 Jul 2014",
     "27 Jul 2014",
     "19 Jul 2014",
-    "19 Jul 2014"
+    "19 Jul 2014",
+    "04 Aug 2014"
 };
 static const maxversion = (sizeof(haleversiontitles) - 1);
 new Handle:OnHaleJump;
@@ -657,8 +660,20 @@ public OnPluginStart()
         Damage[client] = 0;
         AirDamage[client] = 0;
         uberTarget[client] = -1;
-        if (IsValidClient(client, false)) SDKHook(client, SDKHook_OnTakeDamage, OnTakeDamage);
+        if (IsValidClient(client, false))
+        {
+            SDKHook(client, SDKHook_OnTakeDamage, OnTakeDamage);
+            SDKHook(client, SDKHook_PreThinkPost, OnPreThinkPost);
+
+#if defined _tf2attributes_included
+            if (IsPlayerAlive(client))
+            {
+                TF2Attrib_RemoveByName(client, "damage force reduction");
+            }
+#endif
+        }
     }
+
     AddNormalSoundHook(HookSound);
 #if defined _steamtools_included
     steamtools = LibraryExists("SteamTools");
@@ -1484,6 +1499,12 @@ public Action:event_round_start(Handle:event, const String:name[], bool:dontBroa
         uberTarget[ionplay] = -1;
         if (IsValidClient(ionplay))
         {
+#if defined _tf2attributes_included
+            if (IsPlayerAlive(ionplay))
+            {
+                TF2Attrib_RemoveByName(ionplay, "damage force reduction");
+            }
+#endif
             StopHaleMusic(ionplay);
             if (GetClientTeam(ionplay) > _:TFTeam_Spectator) playing++;
         }
@@ -1575,6 +1596,7 @@ public Action:event_round_start(Handle:event, const String:name[], bool:dontBroa
     Stabbed = 0.0;
     Marketed = 0.0;
     HHHClimbCount = 0;
+    PointReady = false;
     new ent = -1;
     while ((ent = FindEntityByClassname2(ent, "func_regenerate")) != -1)
         AcceptEntityInput(ent, "Disable");
@@ -1599,7 +1621,8 @@ public Action:event_round_start(Handle:event, const String:name[], bool:dontBroa
 
     SearchForItemPacks();
 
-    CreateTimer(0.2, Timer_GogoHale);
+    CreateTimer(0.3, MakeHale);
+
     healthcheckused = 0;
     VSHRoundState = 0;
     return Plugin_Continue;
@@ -1705,10 +1728,6 @@ stock GetTeamPlayerCount(TFTeam:team)
     }
     return count;
 }
-public Action:Timer_GogoHale(Handle:hTimer)
-{
-    CreateTimer(0.1, MakeHale);
-}
 public Action:Timer_CheckDoors(Handle:hTimer)
 {
     if (!checkdoors)
@@ -1801,6 +1820,7 @@ public Action:event_round_end(Handle:event, const String:name[], bool:dontBroadc
     }
     for (new i = 1 ; i <= MaxClients; i++)
     {
+        VSHFlags[i] &= ~VSHFLAG_HASONGIVED;
         if (!IsValidClient(i)) continue;
         StopHaleMusic(i);
     }
@@ -2023,7 +2043,7 @@ public Action:StartHaleTimer(Handle:hTimer)
     CreateTimer(0.2, HaleTimer, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
     CreateTimer(0.2, StartRound);
     CreateTimer(0.2, ClientTimer, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
-    if (!PointType)
+    if (!PointType && playing > GetConVarInt(cvarAliveToEnable))
     {
         SetControlPoint(false);
     }
@@ -2537,7 +2557,12 @@ public Action:MakeHale(Handle:hTimer)
         }
     }
     EquipSaxton(Hale);
-    HintPanel(Hale);
+
+    if (VSHRoundState >= 0 && GetClientClasshelpinfoCookie(Hale))
+    {
+        HintPanel(Hale);
+    }
+
     return Plugin_Continue;
 }
 public Action:TF2Items_OnGiveNamedItem(client, String:classname[], iItemDefinitionIndex, &Handle:hItem)
@@ -2812,6 +2837,7 @@ public Action:MakeNoHale(Handle:hTimer, any:clientid)
         ChangeClientTeam(client, OtherTeam);
         SetEntProp(client, Prop_Send, "m_lifeState", 0);
         TF2_RespawnPlayer(client);
+        TF2_RegeneratePlayer(client);   // Added fix by Chdata to correct team colors
     }
 //  SetEntityRenderColor(client, 255, 255, 255, 255);
     if (!VSHRoundState && GetClientClasshelpinfoCookie(client) && !(VSHFlags[client] & VSHFLAG_CLASSHELPED))
@@ -3446,12 +3472,13 @@ stock ForceHale(admin, client, bool:hidden, bool:forever = false)
         CPrintToChatAllEx(client, "{olive}[VSH] {teamcolor}%N {default}%t", client, "vsh_hale_select_text");
     }
 }
-public OnClientPutInServer(client)
+public OnClientPostAdminCheck(client)
 {
     VSHFlags[client] = 0;
 //  MusicDisabled[client] = false;
 //  VoiceDisabled[client] = false;
     SDKHook(client, SDKHook_OnTakeDamage, OnTakeDamage);
+    SDKHook(client, SDKHook_PreThinkPost, OnPreThinkPost);
     //bSkipNextHale[client] = false;
     Damage[client] = 0;
     AirDamage[client] = 0;
@@ -3526,7 +3553,7 @@ public OnClientDisconnect(client)
         {
             if (IsClientInGame(client))
             {
-                if (IsPlayerAlive(client)) CheckAlivePlayers(INVALID_HANDLE);
+                if (IsPlayerAlive(client)) CreateTimer(0.0, CheckAlivePlayers);
                 if (client == FindNextHaleEx()) CreateTimer(1.0, Timer_SkipHalePanel, _, TIMER_FLAG_NO_MAPCHANGE);
             }
             if (client == NextHale)
@@ -3874,6 +3901,47 @@ public Action:ClientTimer(Handle:hTimer)
     }
     return Plugin_Continue;
 }
+
+/*
+Runs every frame for clients
+
+*/
+public OnPreThinkPost(client)
+{
+    if (IsNearSpencer(client) && TF2_IsPlayerInCondition(client, TFCond_Cloaked))
+    {
+        new Float:cloak = GetEntPropFloat(client, Prop_Send, "m_flCloakMeter") - 0.5;
+
+        if (cloak < 0.0)
+        {
+            cloak = 0.0;
+        }
+
+        SetEntPropFloat(client, Prop_Send, "m_flCloakMeter", cloak);
+
+        /*if (RoundFloat(GetGameTime()) == GetGameTime())
+        {
+            CPrintToChdata("%N DISPENSE %f", client, GetGameTime());
+        }*/
+    }
+}
+
+stock bool:IsNearSpencer(client) 
+{ 
+    new bool:dispenserheal, medics = 0; 
+    new healers = GetEntProp(client, Prop_Send, "m_nNumHealers"); 
+    if (healers > 0) 
+    { 
+        for (new i = 1; i <= MaxClients; i++) 
+        { 
+            if (IsValidClient(i) && IsPlayerAlive(i) && GetHealingTarget(i) == client) 
+                medics++; 
+        } 
+    } 
+    dispenserheal = (healers > medics) ? true : false; 
+    return dispenserheal; 
+} 
+
 stock FindSentry(client)
 {
     new i=-1;
@@ -4821,8 +4889,10 @@ public Action:event_jarate(UserMsg:msg_id, Handle:bf, const players[], playersNu
 }
 public Action:CheckAlivePlayers(Handle:hTimer)
 {
-    if (VSHRoundState == 2 || VSHRoundState == -1)
+    if (VSHRoundState != 1) //(VSHRoundState == 2 || VSHRoundState == -1)
+    {
         return Plugin_Continue;
+    }
     RedAlivePlayers = 0;
     for (new i = 1; i <= MaxClients; i++)
     {
@@ -4868,7 +4938,8 @@ public Action:CheckAlivePlayers(Handle:hTimer)
             EmitSoundToAll(s, _, SNDCHAN_ITEM, SNDLEVEL_TRAFFIC, SND_NOFLAGS, SNDVOL_NORMAL, 100, Hale, pos, NULL_VECTOR, false, 0.0);
         }
     }
-    else if (!PointType && (RedAlivePlayers <= (AliveToEnable = GetConVarInt(cvarAliveToEnable))))
+    
+    if (!PointType && (RedAlivePlayers <= (AliveToEnable = GetConVarInt(cvarAliveToEnable))) && !PointReady)
     {
         PrintHintTextToAll("%t", "vsh_point_enable", AliveToEnable);
         if (RedAlivePlayers == AliveToEnable) EmitSoundToAll("vo/announcer_am_capenabled02.wav");
@@ -4879,6 +4950,7 @@ public Action:CheckAlivePlayers(Handle:hTimer)
             EmitSoundToAll(s);
         }
         SetControlPoint(true);
+        PointReady = true;
     }
     return Plugin_Continue;
 }
@@ -5027,11 +5099,25 @@ public Action:OnTakeDamage(client, &attacker, &inflictor, &Float:damage, &damage
                 new iFlags = GetEntityFlags(Hale);
                 new bChanged = false;
 
-                if ((iFlags & (FL_ONGROUND|FL_DUCKING)) == (FL_ONGROUND|FL_DUCKING))    //If Hale is ducking on the ground, it's harder to knock him back
+#if defined _tf2attributes_included
+                if (!!(damagetype & DMG_BLAST) && (iFlags & (FL_ONGROUND|FL_DUCKING)) == (FL_ONGROUND|FL_DUCKING))    //If Hale is ducking on the ground, it's harder to knock him back
+                {
+                    TF2Attrib_SetByName(Hale, "damage force reduction", 0.0);
+                    //damagetype |= DMG_PREVENT_PHYSICS_FORCE;
+                    bChanged = true;
+                }
+                else
+                {
+                    TF2Attrib_RemoveByName(Hale, "damage force reduction");
+                }
+#else
+                // Does not protect against sentries or FaN, but does against miniguns and rockets
+                if ((iFlags & (FL_ONGROUND|FL_DUCKING)) == (FL_ONGROUND|FL_DUCKING))    
                 {
                     damagetype |= DMG_PREVENT_PHYSICS_FORCE;
                     bChanged = true;
                 }
+#endif
 
                 if (damagecustom == TF_CUSTOM_BOOTS_STOMP)
                 {
@@ -6159,6 +6245,17 @@ stock FindVersionData(Handle:panel, versionindex)
 {
     switch (versionindex)
     {
+        case 62: //1.47
+        {
+            DrawPanelText(panel, "1) Updated for the latest version of sourcemod (1.6.1).");
+            DrawPanelText(panel, "2) Fixed final player disconnect not giving the remaining players mini/crits.");
+            DrawPanelText(panel, "3) Fixed cap not starting enabled when the round starts with low enough players to enable it.");
+            DrawPanelText(panel, "4) Fixed players not regenerating on spawn and having items of the opposite team color.");
+            DrawPanelText(panel, "5) Using !haleclass as Hale now shows boss information instead of class information.");
+            DrawPanelText(panel, "6) Fixed Hale's anchor to work against sentries. Crouch walking negates all knockback.");
+            DrawPanelText(panel, "7) Being cloaked next to a dispenser now drains your cloak to prevent camping.");
+            DrawPanelText(panel, "--) This version courtesy of the TF2Data community.");
+        }
         case 61: //1.46
         {
             DrawPanelText(panel, "1) Fixed botkillers (thanks rswallen).");
@@ -6801,8 +6898,20 @@ public Action:HelpPanel(client)
 }
 public Action:HelpPanel2Cmd(client, args)
 {
-    if (!IsValidClient(client)) return Plugin_Continue;
-    HelpPanel2(client);
+    if (!IsValidClient(client))
+    {
+        return Plugin_Continue;
+    }
+
+    if (client == Hale)
+    {
+        HintPanel(Hale);
+    }
+    else
+    {
+        HelpPanel2(client);
+    }
+    
     return Plugin_Handled;
 }
 public Action:HelpPanel2(client)
@@ -7140,12 +7249,56 @@ stock AttachProjectileModel(entity, String:strModel[], String:strAnim[] = "")
     }
     return -1;
 }
+
 stock FindEntityByClassname2(startEnt, const String:classname[])
 {
     /* If startEnt isn't valid shifting it back to the nearest valid one */
     while (startEnt > -1 && !IsValidEntity(startEnt)) startEnt--;
     return FindEntityByClassname(startEnt, classname);
 }
+
+/* Removes all weapons from a client's weapon slot 
+* 
+* @param client        Player's index. 
+* @param slot          Slot index (0-5) 
+* @noreturn 
+* @error               Invalid client, invalid slot or lack of mod support 
+*/ 
+stock TF2_RemoveWeaponSlot2(client, slot) 
+{ 
+   decl ew; 
+   new weaponIndex; 
+   while ((weaponIndex = GetPlayerWeaponSlot(client, slot)) != -1) 
+   { 
+       ew = GetEntPropEnt(weaponIndex, Prop_Send, "m_hExtraWearable"); 
+       if(IsValidEntity(ew)) 
+       { 
+           TF2_RemoveWearable(client, ew); 
+       } 
+       ew = GetEntPropEnt(weaponIndex, Prop_Send, "m_hExtraWearableViewModel"); 
+       if(IsValidEntity(ew)) 
+       { 
+           TF2_RemoveWearable(client, ew); 
+       } 
+       RemovePlayerItem(client, weaponIndex); 
+       AcceptEntityInput(weaponIndex, "Kill"); 
+   } 
+}
+
+/**
+ * Removes all weapons from a client
+ *
+ * @param client        Player's index.
+ * @noreturn
+ */
+stock TF2_RemoveAllWeapons2(client)
+{
+    for (new i = 0; i <= 5; i++)
+    {
+        TF2_RemoveWeaponSlot2(client, i);
+    }
+}
+
 stock SetHaleHealthFix(client, oldhealth)
 {
     new originalhealth = oldhealth;
@@ -7206,8 +7359,6 @@ public Native_IsEnabled(Handle:plugin, numParams)
         result = result2;
     return result;
 }
-
-
 
 public Native_GetHale(Handle:plugin, numParams)
 {
