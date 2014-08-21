@@ -2456,7 +2456,7 @@ EquipSaxton(client)
 {
     bEnableSuperDuperJump = false;
     new SaxtonWeapon;
-    TF2_RemoveAllWeapons2(client);
+    TF2_RemoveAllWeapons(client);
     HaleCharge = 0;
     switch (Special)
     {
@@ -2866,22 +2866,22 @@ public Action:MakeNoHale(Handle:hTimer, any:clientid)
         {
             case 41:    // ReplacelistPrimary
             {
-                TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Primary);
+                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Primary);
                 weapon = SpawnWeapon(client, "tf_weapon_minigun", 15, 1, 0, "");
             }
             case 402:
             {
-                TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Primary);
+                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Primary);
                 SpawnWeapon(client, "tf_weapon_sniperrifle", 14, 1, 0, "");
             }
             case 772, 448: // Block BFB and Soda Popper
             {
-                TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Primary);
+                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Primary);
                 weapon = SpawnWeapon(client, "tf_weapon_scattergun", 13, 1, 0, "");
             }
             case 237:
             {
-                TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Primary);
+                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Primary);
                 weapon = SpawnWeapon(client, "tf_weapon_rocketlauncher", 18, 1, 0, "265 ; 99999.0");
                 SetAmmo(client, 0, 20);
             }
@@ -2889,7 +2889,7 @@ public Action:MakeNoHale(Handle:hTimer, any:clientid)
             {
                 if (GetEntProp(weapon, Prop_Send, "m_iEntityQuality") != 10)
                 {
-                    TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Primary);
+                    TF2_RemoveWeaponSlot(client, TFWeaponSlot_Primary);
                     SpawnWeapon(client, "tf_weapon_syringegun_medic", 17, 1, 10, "17 ; 0.05 ; 144 ; 1");
                 }
             }
@@ -2903,27 +2903,27 @@ public Action:MakeNoHale(Handle:hTimer, any:clientid)
         {
 //          case 226:
 //          {
-//              TF2_RemoveWeaponSlot2(client, 1);
+//              TF2_RemoveWeaponSlot(client, 1);
 //              weapon = SpawnWeapon(client, "tf_weapon_shotgun_soldier", 10, 1, 0, "");
 //          }
             case 528:   // ReplacelistSecondary
             {
-                TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Secondary);
+                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Secondary);
                 weapon = SpawnWeapon(client, "tf_weapon_laser_pointer", 140, 1, 0, "");
             }
             case 46:
             {
-                TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Secondary);
+                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Secondary);
                 weapon = SpawnWeapon(client, "tf_weapon_lunchbox_drink", 163, 1, 0, "144 ; 2");
             }
             case 57:
             {
-                TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Secondary);
+                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Secondary);
                 weapon = SpawnWeapon(client, "tf_weapon_smg", 16, 1, 0, "");
             }
             case 265:
             {
-                TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Secondary);
+                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Secondary);
                 weapon = SpawnWeapon(client, "tf_weapon_pipebomblauncher", 20, 1, 0, "");
                 SetAmmo(client, 1, 24);
             }
@@ -2931,7 +2931,7 @@ public Action:MakeNoHale(Handle:hTimer, any:clientid)
 //          {
 //              if (GetEntProp(weapon, Prop_Send, "m_iEntityQuality") != 10)
 //              {
-//                  TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Secondary);
+//                  TF2_RemoveWeaponSlot(client, TFWeaponSlot_Secondary);
 //                  weapon = SpawnWeapon(client, "tf_weapon_flaregun", 39, 5, 10, "25 ; 0.5 ; 207 ; 1.33 ; 144 ; 1.0 ; 58 ; 3.2")
 //              }
 //          }
@@ -2954,7 +2954,7 @@ public Action:MakeNoHale(Handle:hTimer, any:clientid)
         {
             case 331:
             {
-                TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Melee);
+                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Melee);
                 weapon = SpawnWeapon(client, "tf_weapon_fists", 195, 1, 6, "");
             }
             case 357:
@@ -2965,7 +2965,7 @@ public Action:MakeNoHale(Handle:hTimer, any:clientid)
             {
                 if (!GetConVarBool(cvarEnableEurekaEffect))
                 {
-                    TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Melee);
+                    TF2_RemoveWeaponSlot(client, TFWeaponSlot_Melee);
                     weapon = SpawnWeapon(client, "tf_weapon_wrench", 7, 1, 0, "");
                 }
             }
@@ -2974,7 +2974,7 @@ public Action:MakeNoHale(Handle:hTimer, any:clientid)
     weapon = GetPlayerWeaponSlot(client, 4);
     if (weapon > MaxClients && IsValidEdict(weapon) && GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 60)
     {
-        TF2_RemoveWeaponSlot2(client, 4);
+        TF2_RemoveWeaponSlot(client, 4);
         weapon = SpawnWeapon(client, "tf_weapon_invis", 30, 1, 0, "");
     }
     if (TF2_GetPlayerClass(client) == TFClass_Medic)
@@ -2983,7 +2983,7 @@ public Action:MakeNoHale(Handle:hTimer, any:clientid)
         new mediquality = (weapon > MaxClients && IsValidEdict(weapon) ? GetEntProp(weapon, Prop_Send, "m_iEntityQuality") : -1);
         if (mediquality != 10)
         {
-            TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Secondary);
+            TF2_RemoveWeaponSlot(client, TFWeaponSlot_Secondary);
             weapon = SpawnWeapon(client, "tf_weapon_medigun", 35, 5, 10, "18 ; 0.0 ; 10 ; 1.25 ; 178 ; 0.75 ; 144 ; 2.0");  //200 ; 1 for area of effect healing    // ; 178 ; 0.75 ; 128 ; 1.0 Faster switch-to
             if (GetIndexOfWeaponSlot(client, TFWeaponSlot_Melee) == 142)
             {
@@ -3625,7 +3625,7 @@ public Action:event_player_spawn(Handle:event, const String:name[], bool:dontBro
             VSHFlags[client] |= VSHFLAG_HASONGIVED;
             RemovePlayerBack(client, { 57, 133, 231, 405, 444, 608, 642 }, 7);
             RemovePlayerTarge(client);
-            TF2_RemoveAllWeapons2(client);
+            TF2_RemoveAllWeapons(client);
             TF2_RegeneratePlayer(client);
             CreateTimer(0.1, Timer_RegenPlayer, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
         }
@@ -4399,7 +4399,7 @@ public Action:DoTaunt(client, const String:command[], argc)
             {
                 strcopy(s, PLATFORM_MAX_PATH, BunnyRage[GetRandomInt(1, sizeof(BunnyRage)-1)]);
                 EmitSoundToAll(s, _, _, SNDLEVEL_TRAFFIC, SND_NOFLAGS, SNDVOL_NORMAL, 100, _, pos, NULL_VECTOR, false, 0.0);
-                TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Primary);
+                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Primary);
                 new weapon = SpawnWeapon(client, "tf_weapon_grenadelauncher", 19, 100, 5, "1 ; 0.6 ; 6 ; 0.1 ; 411 ; 150.0 ; 413 ; 1.0 ; 37 ; 0.0 ; 280 ; 17 ; 477 ; 1.0 ; 467 ; 1.0 ; 181 ; 2.0 ; 252 ; 0.7");
                 SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", weapon);
                 SetEntProp(weapon, Prop_Send, "m_iClip1", 50);
@@ -4417,7 +4417,7 @@ public Action:DoTaunt(client, const String:command[], argc)
                 else
                     Format(s, PLATFORM_MAX_PATH, "%s", CBS3);
                 EmitSoundToAll(s, _, _, SNDLEVEL_TRAFFIC, SND_NOFLAGS, SNDVOL_NORMAL, 100, _, pos, NULL_VECTOR, false, 0.0);
-                TF2_RemoveWeaponSlot2(client, TFWeaponSlot_Primary);
+                TF2_RemoveWeaponSlot(client, TFWeaponSlot_Primary);
                 SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", SpawnWeapon(client, "tf_weapon_compound_bow", 1005, 100, 5, "2 ; 2.1 ; 6 ; 0.5 ; 37 ; 0.0 ; 280 ; 19 ; 551 ; 1"));
                 SetAmmo(client, TFWeaponSlot_Primary, ((RedAlivePlayers >= CBS_MAX_ARROWS) ? CBS_MAX_ARROWS : RedAlivePlayers));
                 CreateTimer(0.6, UseRage, dist);
@@ -4749,7 +4749,7 @@ public Action:event_player_death(Handle:event, const String:name[], bool:dontBro
                 new weapon = GetEntPropEnt(Hale, Prop_Send, "m_hActiveWeapon");
                 if (weapon == GetPlayerWeaponSlot(Hale, TFWeaponSlot_Melee))
                 {
-                    TF2_RemoveWeaponSlot2(Hale, TFWeaponSlot_Melee);
+                    TF2_RemoveWeaponSlot(Hale, TFWeaponSlot_Melee);
                     new clubindex, wepswitch = GetRandomInt(0, 3);
                     switch (wepswitch)
                     {
@@ -7441,7 +7441,7 @@ stock FindEntityByClassname2(startEnt, const String:classname[])
 * @noreturn 
 * @error               Invalid client, invalid slot or lack of mod support 
 */ 
-stock TF2_RemoveWeaponSlot2(client, slot) 
+/*stock TF2_RemoveWeaponSlot2(client, slot) 
 { 
    decl ew; 
    new weaponIndex; 
@@ -7461,20 +7461,13 @@ stock TF2_RemoveWeaponSlot2(client, slot)
        AcceptEntityInput(weaponIndex, "Kill"); 
    } 
 }
-
-/**
- * Removes all weapons from a client
- *
- * @param client        Player's index.
- * @noreturn
- */
 stock TF2_RemoveAllWeapons2(client)
 {
     for (new i = 0; i <= 5; i++)
     {
         TF2_RemoveWeaponSlot2(client, i);
     }
-}
+}*/
 
 stock SetHaleHealthFix(client, oldhealth)
 {
