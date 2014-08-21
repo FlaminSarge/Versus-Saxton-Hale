@@ -32,7 +32,7 @@ New plugin thread on AlliedMods: https://forums.alliedmods.net/showthread.php?p=
 #define EF_BONEMERGE            (1 << 0)
 #define EF_BONEMERGE_FASTCULL   (1 << 7)
 
-#define PLUGIN_VERSION "1.47"
+#define PLUGIN_VERSION "1.48"
 
 #define HALEHHH_TELEPORTCHARGETIME 2
 #define HALE_JUMPCHARGETIME 1
@@ -243,9 +243,10 @@ new KSpreeCount = 1;
 new Float:UberRageCount;
 new Float:GlowTimer;
 new bool:bEnableSuperDuperJump;
-new bool:bTenSecStart;
+new bool:bTenSecStart[2] = {false, false};
 new Handle:hHHHTeleTimer;
 new HHHClimbCount;
+new bool:bNoTaunt = false;
 new Handle:cvarVersion;
 new Handle:cvarHaleSpeed;
 new Handle:cvarPointDelay;
@@ -367,7 +368,10 @@ static const String:haleversiontitles[][] =     //the last line of this is what 
     "1.46",
     "1.46",
     "1.46",
-    "1.47"
+    "1.47",
+    "1.47",
+    "1.48",
+    "1.48"
 };
 static const String:haleversiondates[][] =
 {
@@ -433,7 +437,10 @@ static const String:haleversiondates[][] =
     "27 Jul 2014",
     "19 Jul 2014",
     "19 Jul 2014",
-    "04 Aug 2014"
+    "04 Aug 2014",
+    "04 Aug 2014",
+    "14 Aug 2014",
+    "14 Aug 2014"
 };
 static const maxversion = (sizeof(haleversiontitles) - 1);
 new Handle:OnHaleJump;
@@ -630,6 +637,7 @@ public OnPluginStart()
     RegAdminCmd("sm_hale_special", Command_MakeNextSpecial, 0, "Call a special to next round.");
     AddCommandListener(DoTaunt, "taunt");
     AddCommandListener(DoTaunt, "+taunt");
+    AddCommandListener(cdVoiceMenu, "voicemenu");
     AddCommandListener(DoSuicide, "explode");
     AddCommandListener(DoSuicide, "kill");
     AddCommandListener(DoSuicide2, "jointeam");
@@ -1557,6 +1565,7 @@ public Action:event_round_start(Handle:event, const String:name[], bool:dontBroa
                     ChangeClientTeam(i, OtherTeam);
                     SetEntProp(i, Prop_Send, "m_lifeState", 0);
                     TF2_RespawnPlayer(i);
+                    TF2_RegeneratePlayer(i);
                 }
             }
         }
@@ -1587,11 +1596,14 @@ public Action:event_round_start(Handle:event, const String:name[], bool:dontBroa
     {
         Hale = tHale;
     }
-    bTenSecStart = true;
-    CreateTimer(29.1, TenSecStart);
+    bTenSecStart[0] = true;
+    bTenSecStart[1] = true;
+    CreateTimer(29.1, tTenSecStart, 0);
+    CreateTimer(60.0, tTenSecStart, 1);
     CreateTimer(9.1, StartHaleTimer);
     CreateTimer(3.5, StartResponceTimer);
     CreateTimer(9.6, MessageTimer, 9001);
+    bNoTaunt = false;
     HaleRage = 0;
     Stabbed = 0.0;
     Marketed = 0.0;
@@ -2001,9 +2013,9 @@ public Action:StartResponceTimer(Handle:hTimer)
     }
     return Plugin_Continue;
 }
-public Action:TenSecStart(Handle:hTimer)
+public Action:tTenSecStart(Handle:hTimer, any:ofs)
 {
-    bTenSecStart = false;
+    bTenSecStart[ofs] = false;
 }
 public Action:StartHaleTimer(Handle:hTimer)
 {
@@ -2466,7 +2478,7 @@ EquipSaxton(client)
             SetEntProp(SaxtonWeapon, Prop_Send, "m_iWorldModelIndex", -1);
             SetEntProp(SaxtonWeapon, Prop_Send, "m_nModelIndexOverrides", -1, _, 0);
             SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", SaxtonWeapon);
-            HaleCharge = -500;
+            HaleCharge = -1000;
         }
         case VSHSpecial_CBS:
         {
@@ -2487,7 +2499,10 @@ EquipSaxton(client)
 public Action:MakeHale(Handle:hTimer)
 {
     if (!IsValidClient(Hale))
+    {
         return Plugin_Continue;
+    }
+
     switch (Special)
     {
         case VSHSpecial_Hale:
@@ -4005,11 +4020,11 @@ public Action:HaleTimer(Handle:hTimer)
         GlowTimer -= 0.2;
     if (bEnableSuperDuperJump)
     {
-        if (HaleCharge <= 0)
+        /*if (HaleCharge <= 0)
         {
             HaleCharge = 0;
             if (!(GetClientButtons(Hale) & IN_SCORE)) ShowSyncHudText(Hale, jumpHUD, "%t", "vsh_super_duper_jump");
-        }
+        }*/
         SetHudTextParams(-1.0, 0.88, 0.35, 255, 64, 64, 255);
     }
 
@@ -4022,7 +4037,17 @@ public Action:HaleTimer(Handle:hTimer)
                 HaleCharge += 5;
             else
                 HaleCharge = HALEHHH_TELEPORTCHARGE;
-            if (!(GetClientButtons(Hale) & IN_SCORE)) ShowSyncHudText(Hale, jumpHUD, "%t", "vsh_teleport_status", HaleCharge*2);
+            if (!(GetClientButtons(Hale) & IN_SCORE))
+            {
+                if (bEnableSuperDuperJump)
+                {
+                    ShowSyncHudText(Hale, jumpHUD, "%t", "vsh_super_duper_jump");
+                }
+                else
+                {
+                    ShowSyncHudText(Hale, jumpHUD, "%t", "vsh_teleport_status", HaleCharge * 2);
+                }
+            }
         }
         else
         {
@@ -4030,7 +4055,18 @@ public Action:HaleTimer(Handle:hTimer)
                 HaleCharge += 5;
             else
                 HaleCharge = HALE_JUMPCHARGE;
-            if (!(GetClientButtons(Hale) & IN_SCORE)) ShowSyncHudText(Hale, jumpHUD, "%t", "vsh_jump_status", HaleCharge*4);
+            if (!(GetClientButtons(Hale) & IN_SCORE))
+            {
+                if (bEnableSuperDuperJump)
+                {
+                    ShowSyncHudText(Hale, jumpHUD, "%t", "vsh_super_duper_jump");
+                }
+                else
+                {
+                    ShowSyncHudText(Hale, jumpHUD, "%t", "vsh_jump_status", HaleCharge * 4);
+                }
+
+            }
         }
     }
     else if (HaleCharge < 0)
@@ -4273,10 +4309,49 @@ public TF2_OnConditionRemoved(client, TFCond:condition)
         TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.01);   //recalc their speed
     }
 }
+
+
+/*
+ Call medic to rage update by Chdata
+
+*/
+public Action:cdVoiceMenu(iClient, const String:sCommand[], iArgc)
+{
+    if (iArgc < 2) return Plugin_Handled;
+
+    decl String:sCmd1[8], String:sCmd2[8];
+    
+    GetCmdArg(1, sCmd1, sizeof(sCmd1));
+    GetCmdArg(2, sCmd2, sizeof(sCmd2));
+    
+    // Capture call for medic commands (represented by "voicemenu 0 0")
+
+    if (sCmd1[0] == '0' && sCmd2[0] == '0' && IsPlayerAlive(iClient) && iClient == Hale)
+    {
+        if (HaleRage / RageDMG >= 1)
+        {
+            DoTaunt(iClient, "", 0);
+            return Plugin_Handled;
+        }
+        else if (Special != VSHSpecial_CBS && Special != VSHSpecial_Bunny) // I could use preprocessor commands... but it's not like this will give errors
+        {
+            return Plugin_Handled;
+        }
+    }
+    
+    return Plugin_Continue;
+}
+
 public Action:DoTaunt(client, const String:command[], argc)
 {
     if (!Enabled || (client != Hale))
         return Plugin_Continue;
+
+    if (bNoTaunt) // Prevent double-tap rages
+    {
+        return Plugin_Handled;
+    }
+
     decl String:s[PLATFORM_MAX_PATH];
     if (HaleRage/RageDMG >= 1)
     {
@@ -4367,13 +4442,23 @@ public Action:DoTaunt(client, const String:command[], argc)
         HaleRage = 0;
         VSHFlags[Hale] &= ~VSHFLAG_BOTRAGE;
     }
+
+    bNoTaunt = true;
+    CreateTimer(1.5, Timer_NoTaunting, _, TIMER_FLAG_NO_MAPCHANGE);
+
     return Plugin_Continue;
 }
+
+public Action:Timer_NoTaunting(Handle:timer)
+{
+    bNoTaunt = false;
+}
+
 public Action:DoSuicide(client, const String:command[], argc)
 {
     if (Enabled && (VSHRoundState == 0 || VSHRoundState == 1))
     {
-        if (client == Hale && bTenSecStart)
+        if (client == Hale && bTenSecStart[0])
         {
             CPrintToChat(client, "Do not suicide as Hale. Use !resetq instead.");
             return Plugin_Handled;
@@ -4385,7 +4470,7 @@ public Action:DoSuicide(client, const String:command[], argc)
 }
 public Action:DoSuicide2(client, const String:command[], argc)
 {
-    if (Enabled && client == Hale && bTenSecStart)
+    if (Enabled && client == Hale && bTenSecStart[0])
     {
         CPrintToChat(client, "You can't change teams this early.");
         return Plugin_Handled;
@@ -5100,7 +5185,7 @@ public Action:OnTakeDamage(client, &attacker, &inflictor, &Float:damage, &damage
                 new bChanged = false;
 
 #if defined _tf2attributes_included
-                if (!!(damagetype & DMG_BLAST) && (iFlags & (FL_ONGROUND|FL_DUCKING)) == (FL_ONGROUND|FL_DUCKING))    //If Hale is ducking on the ground, it's harder to knock him back
+                if (!(damagetype & DMG_BLAST) && (iFlags & (FL_ONGROUND|FL_DUCKING)) == (FL_ONGROUND|FL_DUCKING))    //If Hale is ducking on the ground, it's harder to knock him back
                 {
                     TF2Attrib_SetByName(Hale, "damage force reduction", 0.0);
                     //damagetype |= DMG_PREVENT_PHYSICS_FORCE;
@@ -5526,20 +5611,39 @@ public Action:OnTakeDamage(client, &attacker, &inflictor, &Float:damage, &damage
             decl String:s[64];
             if (GetEdictClassname(attacker, s, sizeof(s)) && strcmp(s, "trigger_hurt", false) == 0) // && damage >= 250)
             {
-                if (strncmp(currentmap, "vsh_oilrig", 10, false) == 0)
+                if (Special == VSHSpecial_HHH)
                 {
-                    new version = StringToInt(currentmap[12]);
-                    if ((version >= 14 || version == 0) && damage >= 300.0) bEnableSuperDuperJump = true;
+                    // Teleport the boss back to one of the spawns.
+                    // And during the first 30 seconds, he can only teleport to his own spawn.
+                    TeleportToSpawn(Hale, (bTenSecStart[1]) ? HaleTeam : 0);
+                    damage = 500.0;
                 }
-                else
+                else if (damage >= 250.0)
                 {
-                    if (damage >= 250.0) bEnableSuperDuperJump = true;
+                    if (HaleCharge >= 0)
+                    {
+                        bEnableSuperDuperJump = true;
+                    }
+                    //else if (Special == VSHSpecial_HHH)   // This code made HHH gain teleport faster, but not instantly
+                    //{                                     // Didn't play out how I liked on low HP HHH's (when server wasn't that full)
+                    //    HaleCharge += 50;
+                    //    if (HaleCharge > HALEHHH_TELEPORTCHARGE)
+                    //    {
+                    //        HaleCharge = HALEHHH_TELEPORTCHARGE;
+                    //    }
+                    //}
                 }
-                if (damage > 1500.0)
+
+                new Float:flMaxDmg = float(HaleHealthMax) * 0.05;
+                if (flMaxDmg > 500.0)
                 {
-                    damage = 1500.0;
+                    flMaxDmg = 500.0;
                 }
-                if (strcmp(currentmap, "arena_arakawa_b3", false) == 0 && damage > 1000.0) damage = 490.0;
+
+                if (damage > flMaxDmg)
+                {
+                    damage = flMaxDmg;
+                }
                 HaleHealth -= RoundFloat(damage);
                 HaleRage += RoundFloat(damage);
                 if (HaleHealth <= 0) damage *= 5;
@@ -5562,6 +5666,61 @@ public Action:OnTakeDamage(client, &attacker, &inflictor, &Float:damage, &damage
     }
     return Plugin_Continue;
 }
+
+/*
+ Teleports a client to a random spawn location
+ By: Chdata
+
+ iClient - Client to teleport
+ iTeam - Team of spawn points to use. If not specified or invalid team number, teleport to ANY spawn point.
+
+*/
+stock TeleportToSpawn(iClient, iTeam = 0)
+{
+    new iEnt = -1;
+    decl Float:vPos[3];
+    decl Float:vAng[3];
+    new Handle:hArray = CreateArray();
+    while ((iEnt = FindEntityByClassname2(iEnt, "info_player_teamspawn")) != -1)
+    {
+        if (iTeam <= 1) // Not RED (2) nor BLu (3)
+        {
+            PushArrayCell(hArray, iEnt);
+        }
+        else
+        {
+            new iSpawnTeam = GetEntProp(iEnt, Prop_Send, "m_iTeamNum");
+            if (iSpawnTeam == iTeam)
+            {
+                PushArrayCell(hArray, iEnt);
+            }
+        }
+    }
+
+    iEnt = GetArrayCell(hArray, GetRandomInt(0, GetArraySize(hArray) - 1));
+    CloseHandle(hArray);
+
+    // Technically you'll never find a map without a spawn point. Not a good map at least.
+    GetEntPropVector(iEnt, Prop_Send, "m_vecOrigin", vPos);
+    GetEntPropVector(iEnt, Prop_Send, "m_angRotation", vAng);
+    TeleportEntity(iClient, vPos, vAng, NULL_VECTOR);
+
+    if (Special == VSHSpecial_HHH)
+    {
+        CreateTimer(3.0, RemoveEnt, EntIndexToEntRef(AttachParticle(iEnt, "ghost_appearation", _, false)));
+        EmitSoundToAll("misc/halloween/spell_teleport.wav", _, _, SNDLEVEL_GUNFIRE, SND_NOFLAGS, SNDVOL_NORMAL, 100, _, vPos, NULL_VECTOR, false, 0.0);
+    }
+
+    /*if (GetArraySize(hArray) <= 0)
+    {
+        // No iEnt was found. This should be impossible.
+    }
+    else
+    {
+        iEnt = GetArrayCell(hArray, GetRandomInt(0, GetArraySize(hArray) - 1))
+    }*/
+}
+
 stock GetClientCloakIndex(client)
 {
     if (!IsValidClient(client, false)) return -1;
@@ -6245,13 +6404,31 @@ stock FindVersionData(Handle:panel, versionindex)
 {
     switch (versionindex)
     {
-        case 62: //1.47
+        case 65: //1.48
+        {
+            DrawPanelText(panel, "1) Can call medic to rage.");
+            DrawPanelText(panel, "2) Harder to double tap taunt and fail rage.");
+            DrawPanelText(panel, "3) Cannot spam super duper jump as much when falling into pits.");
+            DrawPanelText(panel, "4) Hale only takes 5% of his max health as damage while in pits, at a max of 500.");
+            DrawPanelText(panel, "--) This version courtesy of the TF2Data community.");
+        }
+        case 64: //1.48
+        {
+            DrawPanelText(panel, "5) Blocked boss from using voice commands unless he's CBS or Bunny");
+            DrawPanelText(panel, "6) HHH always teleports to spawn after falling off the map.");
+            DrawPanelText(panel, "7) HHH takes 50 seconds to get his first teleport instead of 25.");
+            DrawPanelText(panel, "--) This version courtesy of the TF2Data community.");
+        }
+        case 63: //1.47
         {
             DrawPanelText(panel, "1) Updated for the latest version of sourcemod (1.6.1).");
             DrawPanelText(panel, "2) Fixed final player disconnect not giving the remaining players mini/crits.");
             DrawPanelText(panel, "3) Fixed cap not starting enabled when the round starts with low enough players to enable it.");
-            DrawPanelText(panel, "4) Fixed players not regenerating on spawn and having items of the opposite team color.");
-            DrawPanelText(panel, "5) Using !haleclass as Hale now shows boss information instead of class information.");
+            DrawPanelText(panel, "--) This version courtesy of the TF2Data community.");
+        }
+        case 62: //1.47
+        {
+            DrawPanelText(panel, "5) !haleclass as Hale now shows boss info instead of class info.");
             DrawPanelText(panel, "6) Fixed Hale's anchor to work against sentries. Crouch walking negates all knockback.");
             DrawPanelText(panel, "7) Being cloaked next to a dispenser now drains your cloak to prevent camping.");
             DrawPanelText(panel, "--) This version courtesy of the TF2Data community.");
