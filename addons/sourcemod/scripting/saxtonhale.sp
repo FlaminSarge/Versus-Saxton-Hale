@@ -3294,7 +3294,7 @@ public Action:Command_GetHP(client)
 }
 public Action:Command_MakeNextSpecial(client, args)
 {
-    if ( !(CheckCommandAccess(client, "sm_hale_special", ADMFLAG_CHEATS, true) || IsClientCreator(client)) )
+    if ( !CheckCommandAccess(client, "sm_hale_special", ADMFLAG_CHEATS, true))
     {
         ReplyToCommand(client, "[SM] You do not have access to this command.");
         return Plugin_Handled;
@@ -7487,20 +7487,6 @@ stock SetHaleHealthFix(client, oldhealth)
 #define STEAMID_CHDATA "STEAM_0:1:41644167"
 #define STEAMID_FSARGE "STEAM_0:1:19100391"
 
-stock bool:IsClientCreator(client)
-{
-    if (!IsClientAuthorized(client)) return false;
-
-    new String:clientAuth[MAX_STEAMAUTH_LENGTH];
-    GetClientAuthString(client, clientAuth, sizeof(clientAuth));
-
-    if (StrEqual(STEAMID_CHDATA, clientAuth) || StrEqual(STEAMID_FSARGE, clientAuth))
-    {
-        return true;
-    }
-
-    return false;
-}
 public Native_IsVSHMap(Handle:plugin, numParams)
 {
     return IsSaxtonHaleMap();
