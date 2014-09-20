@@ -6,7 +6,7 @@ matrix:
   allow_failures:
     - env: SMVERSION=1.7
 before_install:
-    - sudo apt-get -qq update && sudo apt-get install gcc-multilib lynx
+    - sudo apt-get -qq update && sudo apt-get install gcc-multilib lynx libstdc++
 install:
     - SMPATTERN="http:.*sourcemod-.*-git.*-linux.*"
     - SMURL="http://www.sourcemod.net/smdrop/$SMVERSION/"
