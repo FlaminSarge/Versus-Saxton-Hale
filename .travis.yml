@@ -8,8 +8,7 @@ matrix:
 before_install:
     - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test > /dev/null
     - sudo apt-get update -qq > /dev/null
-    - sudo apt-get install -qq g++-4.8 -y > /dev/null
-    - sudo apt-get -qq update && sudo apt-get install gcc-multilib lynx
+    - sudo apt-get -qq update && sudo apt-get install gcc-multilib lynx lib32stdc++6 -y
 install:
     - SMPATTERN="http:.*sourcemod-.*-git.*-linux.*"
     - SMURL="http://www.sourcemod.net/smdrop/$SMVERSION/"
