@@ -452,7 +452,7 @@ new Handle:OnHaleWeighdown;
 new Handle:OnMusic;
 
 //new Handle:hEquipWearable;
-new Handle:hSetAmmoVelocity;
+//new Handle:hSetAmmoVelocity;
 
 /*new Handle:OnIsVSHMap;
 new Handle:OnIsEnabled;
@@ -526,7 +526,7 @@ public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
 #endif
     return APLRes_Success;
 }
-InitGamedata()
+stock InitGamedata()
 {
 #if defined EASTER_BUNNY_ON
     new Handle:hGameConf = LoadGameConfigFile("saxtonhale");
@@ -544,7 +544,7 @@ InitGamedata()
         SetFailState("[VSH] Failed to initialize call to CTFPlayer::EquipWearable");
         return;
     }*/
-    StartPrepSDKCall(SDKCall_Entity);
+/*  StartPrepSDKCall(SDKCall_Entity);
     PrepSDKCall_SetFromConf(hGameConf, SDKConf_Signature, "CTFAmmoPack::SetInitialVelocity");
     PrepSDKCall_AddParameter(SDKType_Vector, SDKPass_Pointer);
     hSetAmmoVelocity = EndPrepSDKCall();
@@ -553,7 +553,7 @@ InitGamedata()
         SetFailState("[VSH] Failed to initialize call to CTFAmmoPack::SetInitialVelocity");
         CloseHandle(hGameConf);
         return;
-    }
+    }*/
     CloseHandle(hGameConf);
 #endif
 }
@@ -563,7 +563,7 @@ InitGamedata()
 }*/
 public OnPluginStart()
 {
-    InitGamedata();
+//  InitGamedata();
 //  RegAdminCmd("hale_eggs", Command_Eggs, ADMFLAG_ROOT);   //WILL CRASH.
     //ACH_Enabled=LibraryExists("hale_achievements");
     LogMessage("===Versus Saxton Hale Initializing - v%s===", haleversiontitles[maxversion]);
@@ -1643,9 +1643,9 @@ public Action:event_round_start(Handle:event, const String:name[], bool:dontBroa
     bTenSecStart[1] = true;
     CreateTimer(29.1, tTenSecStart, 0);
     CreateTimer(60.0, tTenSecStart, 1);
-    CreateTimer(9.1, StartHaleTimer);
-    CreateTimer(3.5, StartResponceTimer);
-    CreateTimer(9.6, MessageTimer, 9001);
+    CreateTimer(9.1, StartHaleTimer, _, TIMER_FLAG_NO_MAPCHANGE);
+    CreateTimer(3.5, StartResponceTimer, _, TIMER_FLAG_NO_MAPCHANGE);
+    CreateTimer(9.6, MessageTimer, true, TIMER_FLAG_NO_MAPCHANGE);
     bNoTaunt = false;
     HaleRage = 0;
     Stabbed = 0.0;
@@ -2426,9 +2426,9 @@ public Action:RemoveEnt(Handle:timer, any:entid)
         AcceptEntityInput(ent, "Kill");
     return Plugin_Continue;
 }
-public Action:MessageTimer(Handle:hTimer, any:client)
+public Action:MessageTimer(Handle:hTimer, any:allclients)
 {
-    if (!IsValidClient(Hale) || ((client != 9001) && !IsValidClient(client)))
+    if (!IsValidClient(Hale))
         return Plugin_Continue;
     if (checkdoors)
     {
@@ -2451,11 +2451,11 @@ public Action:MessageTimer(Handle:hTimer, any:client)
         default: strcopy(translation, sizeof(translation), "vsh_start_hale");
     }
     SetHudTextParams(-1.0, 0.2, 10.0, 255, 255, 255, 255);
-    if (client != 9001 && !(GetClientButtons(client) & IN_SCORE)) //bad
-        ShowHudText(client, -1, "%T", translation, client, Hale, HaleHealthMax);
+    if (!allclients)    //Not a clue what this is for
+        ShowHudText(Hale, -1, "%T", translation, Hale, Hale, HaleHealthMax);
     else
         for (new i = 1; i <= MaxClients; i++)
-            if (IsValidClient(i) && !(GetClientButtons(i) & IN_SCORE))
+            if (IsValidClient(i))// && !(GetClientButtons(i) & IN_SCORE))    //try without the scoreboard button check
                 ShowHudText(i, -1, "%T", translation, i, Hale, HaleHealthMax);
     return Plugin_Continue;
 }
@@ -4872,7 +4872,7 @@ public Action:event_player_death(Handle:event, const String:name[], bool:dontBro
 }
 stock SpawnManyAmmoPacks(client, String:model[], skin=0, num=14, Float:offsz = 30.0)
 {
-    if (hSetAmmoVelocity == INVALID_HANDLE) return;
+//  if (hSetAmmoVelocity == INVALID_HANDLE) return;
     decl Float:pos[3], Float:vel[3], Float:ang[3];
     ang[0] = 90.0;
     ang[1] = 0.0;
@@ -4903,7 +4903,7 @@ stock SpawnManyAmmoPacks(client, String:model[], skin=0, num=14, Float:offsz = 3
         TeleportEntity(ent, pos, ang, vel);
         DispatchSpawn(ent);
         TeleportEntity(ent, pos, ang, vel);
-        SDKCall(hSetAmmoVelocity, ent, vel);
+//      SDKCall(hSetAmmoVelocity, ent, vel);
         SetEntProp(ent, Prop_Data, "m_iHealth", 900);
         new offs = GetEntSendPropOffs(ent, "m_vecInitialVelocity", true);
         SetEntData(ent, offs-4, 1, _, true);    //Sets to crit candy, offs-8 sets crit candy duration (is a float, 3*float = duration)
