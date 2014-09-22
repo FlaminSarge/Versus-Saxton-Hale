@@ -3555,7 +3555,7 @@ public OnClientDisconnect(client)
             if (VSHRoundState == 1 || VSHRoundState == 2)
             {
                 decl String:authid[32];
-                GetClientAuthString(client, authid, sizeof(authid));
+                GetClientAuthId(client, AuthId_Steam2, authid, sizeof(authid));
                 new Handle:pack;
                 CreateDataTimer(3.0, Timer_SetDisconQueuePoints, pack, TIMER_FLAG_NO_MAPCHANGE);
                 WritePackString(pack, authid);
