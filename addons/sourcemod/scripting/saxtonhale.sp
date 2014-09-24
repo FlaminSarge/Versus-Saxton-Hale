@@ -5938,7 +5938,7 @@ public Action:TF2_CalcIsAttackCritical(client, weapon, String:weaponname[], &boo
     }
     return Plugin_Continue;
 }
-public Action:Timer_NoAttacking(Handle:timer, any:ref)
+public Timer_NoAttacking(any:ref)
 {
     new weapon = EntRefToEntIndex(ref);
     SetNextAttack(weapon, 1.56);
@@ -5994,7 +5994,7 @@ public SickleClimbWalls(client, weapon)     //Credit to Mecha the Slag
 
     if (client != Hale) ClientCommand(client, "playgamesound \"%s\"", "player\\taunt_clip_spin.wav");
 
-    CreateTimer(0.0, Timer_NoAttacking, EntIndexToEntRef(weapon), TIMER_FLAG_NO_MAPCHANGE);
+    RequestFrame(Timer_NoAttacking, EntIndexToEntRef(weapon));
 }
 public bool:TraceRayDontHitSelf(entity, mask, any:data)
 {
@@ -7411,9 +7411,9 @@ public OnEggBombSpawned(entity)
 {
     new owner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
     if (IsValidClient(owner) && owner == Hale && Special == VSHSpecial_Bunny)
-        CreateTimer(0.0, Timer_SetEggBomb, EntIndexToEntRef(entity), TIMER_FLAG_NO_MAPCHANGE);
+        RequestFrame(Timer_SetEggBomb, EntIndexToEntRef(entity));
 }
-public Action:Timer_SetEggBomb(Handle:timer, any:ref)
+public Timer_SetEggBomb(any:ref)
 {
     new entity = EntRefToEntIndex(ref);
     if (FileExists(EggModel) && IsModelPrecached(EggModel) && IsValidEntity(entity))
